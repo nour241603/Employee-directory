@@ -1,0 +1,17 @@
+{
+  "version": "2.0",
+  "routeKey": "POST /api/employees",
+  "rawPath": "/api/employees",
+  "headers": {
+    "content-type": "application/json",
+    "authorization": "Bearer REPLACE-WITH-A-REAL-LOGIN-TOKEN"
+  },
+  "requestContext": {
+    "http": {
+      "method": "POST",
+      "path": "/api/employees"
+    }
+  },
+  "body": "{\"name\":\"Nadia Fathy\",\"email\":\"nadia.fathy@example.com\",\"phone\":\"+20 100 000 0099\",\"skills\":[\"sql\",\"excel\"],\"departmentId\":\"DEP-eng\",\"roleId\":\"ROL-junior\",\"managerId\":\"EMP-002\"}",
+  "isBase64Encoded": false
+}

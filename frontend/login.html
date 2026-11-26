@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Employee Directory</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">Employee Directory</span>
+    <nav>
+      <a href="index.html">Directory</a>
+      <a href="employees.html">Employees</a>
+      <a href="organization.html">Organization</a>
+      <a href="login.html" class="active">Login</a>
+    </nav>
+    <span id="api-status" class="api-status">Checking API...</span>
+  </header>
+
+  <main>
+    <h1>Login</h1>
+    <div id="message" class="message" hidden></div>
+    <section class="card">
+      <!-- OWNER: Jana - the login form and backend login route are written by the team (security control) -->
+      <form id="login-form">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" required>
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" required>
+        <button type="submit">Log in</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>
