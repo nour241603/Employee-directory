@@ -1,0 +1,89 @@
+/* Shared styles for every page */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #1f2933;
+  background: #f5f7fa;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 32px;
+  background: #1f3a5f;
+  color: #fff;
+}
+.brand { font-weight: 700; }
+.topbar nav { display: flex; gap: 16px; flex: 1; }
+.topbar nav a { color: #cbd5e1; text-decoration: none; }
+.topbar nav a.active, .topbar nav a:hover { color: #fff; }
+
+.api-status { font-size: 0.85rem; padding: 4px 10px; border-radius: 12px; background: #475569; }
+.api-status.online { background: #15803d; }
+.api-status.offline { background: #b91c1c; }
+
+main { max-width: 1100px; margin: 0 auto; padding: 24px 32px; }
+
+.message { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; }
+.message.success { background: #dcfce7; color: #14532d; }
+.message.error { background: #fee2e2; color: #7f1d1d; }
+
+.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+
+form { display: grid; gap: 10px; max-width: 480px; }
+label { font-weight: 600; font-size: 0.9rem; }
+input, select, textarea { padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+
+button { padding: 8px 14px; border: 0; border-radius: 6px; background: #1f3a5f; color: #fff; cursor: pointer; font: inherit; }
+button.secondary { background: #e2e8f0; color: #1f2933; }
+button.danger { background: #b91c1c; }
+
+button:disabled { opacity: 0.5; cursor: default; }
+
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+td.actions { white-space: nowrap; }
+td.actions button { margin-left: 4px; }
+
+h2 { margin-top: 0; font-size: 1.2rem; }
+h3 { font-size: 1rem; margin: 20px 0 8px; }
+.muted { color: #64748b; font-size: 0.9rem; }
+.tag { display: inline-block; padding: 2px 8px; margin: 2px 0; border-radius: 10px; background: #e0e7ff; color: #3730a3; font-size: 0.8rem; }
+
+.row-form { display: flex; flex-wrap: wrap; gap: 8px; max-width: none; align-items: center; }
+.row-form input[type="search"], .row-form input[type="text"] { flex: 1; min-width: 200px; }
+
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; align-items: start; }
+
+/* Directory cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.person { display: flex; gap: 12px; align-items: center; text-align: left; background: #f8fafc; color: inherit; border: 1px solid #e2e8f0; padding: 10px; }
+.person:hover { border-color: #1f3a5f; }
+.person img, .profile img { border-radius: 50%; background: #e2e8f0; }
+.pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 12px; }
+.profile { display: flex; gap: 20px; }
+.profile h3 { margin-top: 0; }
+
+/* Status badges, expert scores, reporting path */
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; background: #dcfce7; color: #14532d; }
+.badge.OnLeave { background: #fef3c7; color: #78350f; }
+.badge.Left { background: #e2e8f0; color: #475569; }
+tr.left td { color: #94a3b8; }
+.tag.missing { background: #fee2e2; color: #991b1b; }
+.score { display: inline-block; width: 60px; height: 8px; background: #e2e8f0; border-radius: 4px; margin-right: 6px; vertical-align: middle; overflow: hidden; }
+.score span { display: block; height: 100%; background: #1f3a5f; }
+label.inline { font-weight: normal; display: flex; gap: 6px; align-items: center; }
+.path { list-style: none; padding: 0; margin: 8px 0; }
+.path li { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-left: 3px solid #cbd5e1; margin-left: 8px; }
+.path li.start, .path li.end { border-left-color: #1f3a5f; font-weight: 600; }
+.path li.shared-manager { border-left-color: #d97706; background: #fffbeb; }
+
+/* Org chart: nested lists drawn as a tree */
+.org-chart ul { list-style: none; padding-left: 28px; margin: 0; border-left: 2px solid #cbd5e1; }
+.org-chart > ul { border-left: 0; padding-left: 0; }
+.org-chart li { margin: 8px 0; position: relative; }
+.org-chart ul ul li::before { content: ""; position: absolute; left: -28px; top: 22px; width: 24px; border-top: 2px solid #cbd5e1; }
+.node { display: inline-flex; flex-direction: column; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; min-width: 200px; }

@@ -1,0 +1,9 @@
+// Starts the API on your PC: npm run dev
+require('dotenv').config();
+const app = require('./app');
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`API running on http://localhost:${PORT}`);
+});
