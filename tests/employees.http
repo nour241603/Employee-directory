@@ -1,0 +1,308 @@
+# OWNER: Jana - Employee Management tests (VS Code REST Client: click "Send Request")
+# Run in order on fresh sample data (npm run setup-db).
+# Demo password for every sample employee: password123
+@baseUrl = http://localhost:3000
+
+### ---------- Login and token security ----------
+
+### S1 Login as HR (Salma) -> 200, gives a token
+# @name hrLogin
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "salma.nabil@example.com", "password": "password123" }
+
+### S2 Login as EMPLOYEE (Karim) -> 200
+# @name empLogin
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "karim.said@example.com", "password": "password123" }
+
+### S3 Wrong password -> 401 LOGIN_FAILED (same message as an unknown email)
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "salma.nabil@example.com", "password": "wrong-password" }
+
+### S4 Unknown email -> 401 LOGIN_FAILED (identical response, no email probing)
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "nobody@example.com", "password": "password123" }
+
+### S5 No token -> 401 NOT_LOGGED_IN
+GET {{baseUrl}}/api/employees
+
+### S6 Garbage token -> 401 INVALID_TOKEN
+GET {{baseUrl}}/api/employees
+Authorization: Bearer not-a-real-token
+
+### S7 The token answer must NOT contain passwordHash (check by eye: no passwordHash anywhere)
+GET {{baseUrl}}/api/employees/EMP-003
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Function 1: Onboarding ----------
+
+### E1 List employees -> 200
+GET {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### E2 Register with a chosen manager -> 201
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Nadia Fathy", "email": "nadia.fathy@example.com", "phone": "+20 100 000 0099",
+  "skills": ["SQL", "Excel"], "departmentId": "DEP-eng", "roleId": "ROL-junior", "managerId": "EMP-002" }
+
+### E3 Register with no manager -> 201, reports to the Sales head automatically (managerAssignedAutomatically: true)
+# @name newSales
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Ziad Hamdy", "email": "ziad.hamdy@example.com", "skills": ["crm"],
+  "departmentId": "DEP-sales", "roleId": "ROL-junior" }
+
+### E4 Invalid data -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "N", "email": "not-an-email", "skills": "sql" }
+
+### E5 Duplicate email -> 409 EMAIL_TAKEN
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Omar Copy", "email": "omar.farouk@example.com" }
+
+### E6 Unknown department -> 404 DEPARTMENT_NOT_FOUND
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Test Person", "email": "test.person@example.com", "departmentId": "DEP-nope" }
+
+### E7 Update phone and skills as HR -> 200
+PATCH {{baseUrl}}/api/employees/EMP-003
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "phone": "+20 111 222 3333", "skills": ["sql", "python", "docker"] }
+
+### ---------- Role and field security ----------
+
+### S8 EMPLOYEE role tries to register someone -> 403 NOT_ALLOWED
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Hacker Man", "email": "hacker.man@example.com" }
+
+### S9 Karim edits his own phone and skills -> 200 (self-edit allowed)
+PATCH {{baseUrl}}/api/employees/EMP-003
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "phone": "+20 122 333 4444" }
+
+### S10 Karim tries to edit his own email -> 403 FIELD_NOT_EDITABLE (self may only change phone/skills)
+PATCH {{baseUrl}}/api/employees/EMP-003
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "email": "karim.new@example.com" }
+
+### S11 Karim tries to edit someone else's record -> 404 (existence not leaked)
+PATCH {{baseUrl}}/api/employees/EMP-007
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "phone": "+20 999 999 9999" }
+
+### S12 Karim tries to smuggle status/accessRole/createdAt in the body -> 403 FIELD_NOT_EDITABLE
+PATCH {{baseUrl}}/api/employees/EMP-003
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "status": "Left", "accessRole": "HR", "createdAt": "2020-01-01" }
+
+### S13 Body sent as text instead of JSON -> 415 UNSUPPORTED_MEDIA_TYPE
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: text/plain
+
+name=Test
+
+### ---------- Function 3: Manager assignment rules ----------
+
+### E8 Circular reporting: Omar cannot report to Karim (who reports to him) -> 409 CIRCULAR_REPORTING
+PUT {{baseUrl}}/api/employees/EMP-001/manager
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "managerId": "EMP-003" }
+
+### E9 Own manager -> 400 SELF_MANAGER
+PUT {{baseUrl}}/api/employees/EMP-003/manager
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "managerId": "EMP-003" }
+
+### E10 Manager in another department -> 409 DIFFERENT_DEPARTMENT
+PUT {{baseUrl}}/api/employees/EMP-003/manager
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "managerId": "EMP-006" }
+
+### E11 Manager whose role is not higher -> 409 MANAGER_ROLE_TOO_LOW
+PUT {{baseUrl}}/api/employees/{{newSales.response.body.id}}/manager
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "managerId": "EMP-007" }
+
+### ---------- Function 2: Status workflow ----------
+
+### E12 Mona goes on leave -> 200
+PATCH {{baseUrl}}/api/employees/EMP-002/status
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "status": "OnLeave" }
+
+### E13 Manager on leave cannot take reports -> 409 MANAGER_NOT_ACTIVE
+PUT {{baseUrl}}/api/employees/EMP-003/manager
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "managerId": "EMP-002" }
+
+### E14 Mona comes back -> 200
+PATCH {{baseUrl}}/api/employees/EMP-002/status
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "status": "Active" }
+
+### E15 Leaving without handing over the team -> 409 HAS_DIRECT_REPORTS
+PATCH {{baseUrl}}/api/employees/EMP-002/status
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "status": "Left" }
+
+### E16 Move Mona's whole team to Omar (all-or-nothing) -> 200
+POST {{baseUrl}}/api/employees/EMP-002/reassign-team
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "newManagerId": "EMP-001" }
+
+### E17 Now Mona can leave -> 200
+PATCH {{baseUrl}}/api/employees/EMP-002/status
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "status": "Left" }
+
+### E18 Left is final -> 409 INVALID_STATUS_CHANGE
+PATCH {{baseUrl}}/api/employees/EMP-002/status
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "status": "Active" }
+
+### E19 Deleting an active employee -> 409 NOT_OFFBOARDED
+DELETE {{baseUrl}}/api/employees/EMP-005
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### E20 Deleting an offboarded record -> 200
+DELETE {{baseUrl}}/api/employees/EMP-002
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### S14 Mona left (and her record was deleted at E20): her login is dead -> 401
+# A user who left but still has a record gets 401 ACCOUNT_INACTIVE instead.
+# @name monaLogin
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "mona.adel@example.com", "password": "password123" }
+
+### ---------- Department move re-routes the reporting line ----------
+
+### E21 Karim moves to Sales -> 200, managerId becomes EMP-006 (the Sales head)
+PATCH {{baseUrl}}/api/employees/EMP-003
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "departmentId": "DEP-sales" }
+
+### E22 Team of a manager -> 200
+GET {{baseUrl}}/api/employees/EMP-001/team
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### E23 Unknown employee -> 404 EMPLOYEE_NOT_FOUND
+GET {{baseUrl}}/api/employees/EMP-nope
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Function 4: Promotions (history + rules) ----------
+
+### P1 Karim is promoted Junior (level 2) -> Senior (level 4) as HR -> 200, history entry with promotedBy = Salma
+POST {{baseUrl}}/api/employees/EMP-003/promote
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-senior", "reason": "Finished the cloud security certification." }
+
+### P2 Promotion history of Karim as HR -> 200, one entry (from ROL-junior to ROL-senior)
+GET {{baseUrl}}/api/employees/EMP-003/promotions
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### P3 Same-level or lower move is not a promotion -> 409 NOT_A_PROMOTION
+POST {{baseUrl}}/api/employees/EMP-003/promote
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-junior", "reason": "Trying to go backwards." }
+
+### P4 Promotion that would reach the manager's own level (Karim -> Head level 8, his manager Hana is Head level 8) -> 409 WOULD_PASS_MANAGER
+POST {{baseUrl}}/api/employees/EMP-003/promote
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-head", "reason": "Skipping two levels at once." }
+
+### P5 Missing or too-short reason -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/employees/EMP-003/promote
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-lead", "reason": "" }
+
+### P6 EMPLOYEE role tries to promote -> 403 NOT_ALLOWED
+POST {{baseUrl}}/api/employees/EMP-007/promote
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-senior", "reason": "Promoting myself, thanks." }
+
+### P7 Unknown role -> 404 ROLE_NOT_FOUND
+POST {{baseUrl}}/api/employees/EMP-003/promote
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-nope", "reason": "Made-up role." }
+
+### P8 Karim reads his own history -> 200 (self allowed)
+GET {{baseUrl}}/api/employees/EMP-003/promotions
+Authorization: Bearer {{empLogin.response.body.token}}
+
+### P9 Karim reads someone else's history -> 404 (existence not leaked)
+GET {{baseUrl}}/api/employees/EMP-007/promotions
+Authorization: Bearer {{empLogin.response.body.token}}
