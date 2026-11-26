@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Organization — Employee Directory</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">Employee Directory</span>
+    <nav>
+      <a href="index.html">Directory</a>
+      <a href="employees.html">Employees</a>
+      <a href="organization.html" class="active">Organization</a>
+      <a href="login.html">Login</a>
+    </nav>
+    <span id="api-status" class="api-status">Checking API…</span>
+  </header>
+
+  <main>
+    <h1>Organization</h1>
+    <div id="message" class="message" hidden></div>
+
+    <section class="card">
+      <h2>Organization chart</h2>
+      <form id="chart-form" class="row-form">
+        <select id="chart-department"></select>
+        <button type="submit">Show chart</button>
+      </form>
+      <p id="chart-summary" class="muted"></p>
+      <div id="org-chart" class="org-chart"></div>
+    </section>
+
+    <div class="two-col">
+      <section class="card">
+        <h2>Departments</h2>
+        <div id="department-list"></div>
+        <h3>New department</h3>
+        <form id="department-form">
+          <label for="dept-name">Name</label>
+          <input id="dept-name" required minlength="2" maxlength="60">
+          <label for="dept-description">Description</label>
+          <input id="dept-description" maxlength="300">
+          <button type="submit">Create department</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Roles</h2>
+        <div id="role-list"></div>
+        <h3>New role</h3>
+        <form id="role-form">
+          <label for="role-title">Job title</label>
+          <input id="role-title" required minlength="2" maxlength="60">
+          <label for="role-level">Level (1 = junior, 10 = top)</label>
+          <input id="role-level" type="number" min="1" max="10" value="1" required>
+          <button type="submit">Create role</button>
+        </form>
+
+        <h3>Assign a role</h3>
+        <form id="assign-form">
+          <label for="assign-employee">Employee</label>
+          <select id="assign-employee" required></select>
+          <label for="assign-role">Role</label>
+          <select id="assign-role" required></select>
+          <button type="submit">Assign role</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/organization.js"></script>
+</body>
+</html>
