@@ -384,6 +384,68 @@ async function reassignTeam(managerId, newManagerId) {
   return { from: managerId, to: newManagerId, moved: team.map((e) => ({ id: e.id, name: e.name })) };
 }
 
+/* ---------- Function 4: Promotions (with full history) ---------- */
+
+// A promotion moves an employee to a role with a HIGHER level and records it.
+// Rules:
+//   - only HR may promote (the route checks this)
+//   - the employee must still work here (not Left)
+//   - the new role must exist and must rank above the current one; a sideways
+//     or downward move is not a promotion
+//   - a reason is required, so every promotion is justified
+//   - the employee cannot end up at or above their own manager's level;
+//     promote the manager first (or move the employee) instead
+//   - promotedBy and promotedAt come from the login token and the server clock,
+//     never from the request body
+// Every promotion is appended to promotionHistory on the record, so the full
+// trail (who, from which role, to which role, when, why) is kept.
+async function promote(id, roleId, reason, promotedById) {
+  const employee = await getEmployeeOrFailRaw(id);
+  if (employee.status === 'Left') {
+    throw new AppError(409, 'EMPLOYEE_LEFT', `${employee.name} has left; the record can no longer be edited.`);
+  }
+
+  const newRole = await organization().getRoleOrFail(roleId);
+  const roles = await organization().listRoles();
+  const currentRole = roles.find((r) => r.id === employee.roleId) || null;
+  const currentLevel = currentRole ? currentRole.level : 0;
+  if (newRole.level <= currentLevel) {
+    throw new AppError(409, 'NOT_A_PROMOTION',
+      `${newRole.title} (level ${newRole.level}) is not above the current role` +
+      (currentRole ? ` ${currentRole.title} (level ${currentRole.level}).` : '.'));
+  }
+
+  if (employee.managerId) {
+    const manager = await getEmployeeRaw(employee.managerId);
+    const managerRole = manager && roles.find((r) => r.id === manager.roleId);
+    if (manager && manager.status !== 'Left' && managerRole && newRole.level >= managerRole.level) {
+      throw new AppError(409, 'WOULD_PASS_MANAGER',
+        `${newRole.title} (level ${newRole.level}) would put ${employee.name} at or above their manager's role` +
+        ` ${managerRole.title} (level ${managerRole.level}). Promote the manager first or reassign the employee.`);
+    }
+  }
+
+  const entry = {
+    fromRoleId: employee.roleId || null,
+    toRoleId: newRole.id,
+    fromLevel: currentRole ? currentRole.level : null,
+    toLevel: newRole.level,
+    reason,
+    promotedBy: promotedById,
+    promotedAt: new Date().toISOString()
+  };
+  employee.roleId = newRole.id;
+  employee.promotionHistory = [...(employee.promotionHistory || []), entry];
+  await save(employee);
+  return { ...stripPassword(employee), lastPromotion: entry };
+}
+
+// The promotion trail of one employee, oldest first.
+async function getPromotionHistory(id) {
+  const employee = await getEmployeeOrFail(id);
+  return employee.promotionHistory || [];
+}
+
 // Used by the Organization Structure service to give an employee a role.
 async function setRole(id, roleId) {
   const employee = await getEmployeeOrFailRaw(id);
@@ -407,5 +469,7 @@ module.exports = {
   deleteEmployee,
   assignManager,
   reassignTeam,
+  promote,
+  getPromotionHistory,
   setRole
 };

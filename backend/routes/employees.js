@@ -3,6 +3,7 @@
 //   1. Onboarding:          POST /, GET /, GET /:id, PATCH /:id
 //   2. Status workflow:     PATCH /:id/status, DELETE /:id (only after leaving)
 //   3. Manager assignment:  PUT /:id/manager, POST /:id/reassign-team, GET /:id/team
+//   4. Promotions:          POST /:id/promote (HR), GET /:id/promotions (self or HR)
 //
 // Every route needs a login token. HR-only routes re-check the role on the server
 // (401 without a token, 403 with the wrong role). PATCH /:id is limited to the
@@ -27,5 +28,7 @@ router.put('/:id/manager', requireLogin, requireRole('HR'), controller.assignMan
 router.post('/:id/reassign-team', requireLogin, requireRole('HR'), controller.reassignTeam);
 router.get('/:id/team', requireLogin, controller.getTeam);
 
+router.post('/:id/promote', requireLogin, requireRole('HR'), controller.promote);
+router.get('/:id/promotions', requireLogin, isSelfOrHR, controller.getPromotionHistory);
 
 module.exports = router;

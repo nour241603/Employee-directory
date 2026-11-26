@@ -215,6 +215,36 @@ async function getTeam(req, res, next) {
   }
 }
 
+/* ---------- Function 4: Promotions ---------- */
+
+async function promote(req, res, next) {
+  try {
+    requireJson(req);
+    const { roleId, reason } = req.body;
+    const errors = [];
+    if (typeof roleId !== 'string' || !ID_PATTERN.test(roleId)) {
+      errors.push({ field: 'roleId', message: 'roleId must be a valid role id.' });
+    }
+    if (typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 200) {
+      errors.push({ field: 'reason', message: 'Give a reason for the promotion (3 to 200 characters).' });
+    }
+    if (errors.length) throw validationError(errors);
+
+    // promotedBy comes from the login token, never from the body.
+    res.status(200).json(await employeeService.promote(req.params.id, roleId, reason.trim(), req.user.id));
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getPromotionHistory(req, res, next) {
+  try {
+    res.status(200).json(await employeeService.getPromotionHistory(req.params.id));
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   login,
   listEmployees,
@@ -225,5 +255,7 @@ module.exports = {
   assignManager,
   changeStatus,
   reassignTeam,
+  promote,
+  getPromotionHistory,
   getTeam
 };
