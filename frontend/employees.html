@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employees - Employee Directory</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">Employee Directory</span>
+    <nav>
+      <a href="index.html">Directory</a>
+      <a href="employees.html" class="active">Employees</a>
+      <a href="organization.html">Organization</a>
+      <a href="login.html">Login</a>
+    </nav>
+    <span id="api-status" class="api-status">Checking API...</span>
+  </header>
+
+  <main>
+    <h1>Employees</h1>
+    <div id="message" class="message" hidden></div>
+
+    <section class="card">
+      <h2>All employees</h2>
+      <div id="employee-list"></div>
+    </section>
+
+    <div class="two-col">
+      <section class="card">
+        <h2>Register a new employee</h2>
+        <form id="register-form">
+          <label for="reg-name">Full name</label>
+          <input id="reg-name" required minlength="2" maxlength="80">
+          <label for="reg-email">Email</label>
+          <input id="reg-email" type="email" required>
+          <label for="reg-phone">Phone</label>
+          <input id="reg-phone" type="tel" placeholder="+20 100 000 0000">
+          <label for="reg-skills">Skills (comma separated)</label>
+          <input id="reg-skills" placeholder="sql, excel, communication">
+          <label for="reg-department">Department</label>
+          <select id="reg-department"></select>
+          <label for="reg-role">Role</label>
+          <select id="reg-role"></select>
+          <label for="reg-manager">Manager</label>
+          <select id="reg-manager"></select>
+          <p class="muted">Leave the manager empty to assign the department head automatically.</p>
+          <button type="submit">Register employee</button>
+        </form>
+      </section>
+
+      <section class="card" id="edit-card" hidden>
+        <h2>Edit <span id="edit-title"></span></h2>
+        <form id="edit-form">
+          <input type="hidden" id="edit-id">
+          <label for="edit-name">Full name</label>
+          <input id="edit-name" required minlength="2" maxlength="80">
+          <label for="edit-email">Email</label>
+          <input id="edit-email" type="email" required>
+          <label for="edit-phone">Phone</label>
+          <input id="edit-phone" type="tel">
+          <label for="edit-skills">Skills (comma separated)</label>
+          <input id="edit-skills">
+          <label for="edit-department">Department</label>
+          <select id="edit-department"></select>
+          <button type="submit">Save profile</button>
+        </form>
+
+        <h3>Manager</h3>
+        <p class="muted">Rules: same department (or company-level), higher role, active, no loops, team size limit.</p>
+        <form id="manager-form" class="row-form">
+          <select id="edit-manager"></select>
+          <button type="submit">Assign manager</button>
+        </form>
+
+        <h3>Team</h3>
+        <div id="edit-team"></div>
+        <form id="reassign-form" class="row-form">
+          <select id="reassign-to"></select>
+          <button type="submit">Move whole team</button>
+        </form>
+
+        <h3>Promotions</h3>
+        <div id="edit-promotions"></div>
+        <form id="promote-form" class="row-form">
+          <select id="promote-role"></select>
+          <input id="promote-reason" placeholder="Reason for the promotion" minlength="3" maxlength="200" required>
+          <button type="submit">Promote</button>
+        </form>
+
+        <h3>Employment status</h3>
+        <p>Current: <span id="edit-status"></span></p>
+        <form id="status-form" class="row-form">
+          <select id="status-new">
+            <option value="Active">Active</option>
+            <option value="OnLeave">On leave</option>
+            <option value="Left">Left (offboard)</option>
+          </select>
+          <select id="status-reassign"></select>
+          <button type="submit">Change status</button>
+        </form>
+        <p class="muted">When someone leaves, choose who takes over their team.</p>
+        <button type="button" id="edit-close" class="secondary">Close</button>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/employees.js"></script>
+</body>
+</html>
