@@ -1,0 +1,21 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadOnlyAllTables",
+      "Effect": "Allow",
+      "Action": ["dynamodb:GetItem", "dynamodb:Scan"],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:000000000000:table/Employees",
+        "arn:aws:dynamodb:us-east-1:000000000000:table/Departments",
+        "arn:aws:dynamodb:us-east-1:000000000000:table/Roles"
+      ]
+    },
+    {
+      "Sid": "WriteOwnLogs",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": "arn:aws:logs:us-east-1:000000000000:log-group:/aws/lambda/empdir-directory-api:*"
+    }
+  ]
+}
