@@ -1,10 +1,18 @@
+<<<<<<< Updated upstream
 // OWNER: Jana - employees page: onboarding, profile, manager assignment, team moves, status workflow
+=======
+// OWNER: Jana — employees page: onboarding, profile, manager assignment, team moves, status workflow
+>>>>>>> Stashed changes
 let employees = [];
 let departments = [];
 let roles = [];
 
 const STATUS_LABEL = { Active: 'Active', OnLeave: 'On leave', Left: 'Left' };
+<<<<<<< Updated upstream
 const nameOf = (list, id, field = 'name') => list.find((x) => x.id === id)?.[field] || '-';
+=======
+const nameOf = (list, id, field = 'name') => list.find((x) => x.id === id)?.[field] || '—';
+>>>>>>> Stashed changes
 const current = () => employees.filter((e) => e.status !== 'Left');
 
 function parseSkills(text) {
@@ -25,10 +33,13 @@ async function loadAll() {
     renderList();
     fillForms();
   } catch (error) {
+<<<<<<< Updated upstream
     if (error.status === 401) {
       window.location.href = 'login.html';
       return;
     }
+=======
+>>>>>>> Stashed changes
     showMessage(error.message, 'error');
   }
 }
@@ -119,16 +130,24 @@ async function openEdit(id) {
     const managerSelect = document.getElementById('edit-manager');
     fillSelect(managerSelect, others, 'No manager');
     managerSelect.value = employee.managerId || '';
+<<<<<<< Updated upstream
     fillSelect(document.getElementById('reassign-to'), others, 'Move the team to...');
     fillSelect(document.getElementById('status-reassign'), others, 'Team goes to... (when leaving)');
+=======
+    fillSelect(document.getElementById('reassign-to'), others, 'Move the team to…');
+    fillSelect(document.getElementById('status-reassign'), others, 'Team goes to… (when leaving)');
+>>>>>>> Stashed changes
 
     document.getElementById('edit-team').innerHTML = team.length
       ? `<ul>${team.map((t) => `<li>${escapeHtml(t.name)}</li>`).join('')}</ul>`
       : '<p class="muted">Nobody reports to this employee.</p>';
     document.getElementById('reassign-form').hidden = team.length === 0;
 
+<<<<<<< Updated upstream
     await loadPromotions(id);
 
+=======
+>>>>>>> Stashed changes
     const card = document.getElementById('edit-card');
     card.hidden = false;
     card.scrollIntoView({ behavior: 'smooth' });
@@ -200,6 +219,7 @@ async function moveTeam(event) {
   }
 }
 
+<<<<<<< Updated upstream
 /* ---------- Function 4: Promotions ---------- */
 
 async function loadPromotions(id) {
@@ -237,6 +257,8 @@ async function promote(event) {
   }
 }
 
+=======
+>>>>>>> Stashed changes
 /* ---------- Function 2: Status workflow ---------- */
 
 async function changeStatus(event) {
@@ -277,7 +299,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('manager-form').addEventListener('submit', saveManager);
   document.getElementById('reassign-form').addEventListener('submit', moveTeam);
   document.getElementById('status-form').addEventListener('submit', changeStatus);
+<<<<<<< Updated upstream
   document.getElementById('promote-form').addEventListener('submit', promote);
+=======
+>>>>>>> Stashed changes
   document.getElementById('edit-close').addEventListener('click', () => {
     document.getElementById('edit-card').hidden = true;
   });

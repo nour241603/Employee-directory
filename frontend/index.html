@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Directory — Employee Directory</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">Employee Directory</span>
+    <nav>
+      <a href="index.html" class="active">Directory</a>
+      <a href="employees.html">Employees</a>
+      <a href="organization.html">Organization</a>
+      <a href="login.html">Login</a>
+    </nav>
+    <span id="api-status" class="api-status">Checking API…</span>
+  </header>
+
+  <main>
+    <h1>Directory</h1>
+    <div id="message" class="message" hidden></div>
+
+    <section class="card">
+      <h2>Search employees</h2>
+      <form id="search-form" class="row-form">
+        <input id="search-q" type="search" placeholder="Name, email, role or skill" maxlength="80">
+        <select id="search-department"></select>
+        <select id="search-role"></select>
+        <select id="search-skill"></select>
+        <select id="search-status">
+          <option value="">Current staff</option>
+          <option value="Active">Active</option>
+          <option value="OnLeave">On leave</option>
+          <option value="Left">Left</option>
+        </select>
+        <select id="search-sort">
+          <option value="name">Sort: name</option>
+          <option value="department">Sort: department</option>
+          <option value="seniority">Sort: seniority</option>
+        </select>
+        <button type="submit">Search</button>
+        <button type="button" id="search-clear" class="secondary">Clear</button>
+      </form>
+      <p id="search-summary" class="muted"></p>
+      <div id="results" class="grid"></div>
+      <div class="pager">
+        <button type="button" id="prev-page" class="secondary">Previous</button>
+        <span id="page-info"></span>
+        <button type="button" id="next-page" class="secondary">Next</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Find an expert</h2>
+      <form id="experts-form" class="row-form">
+        <input id="experts-skills" type="text" placeholder="Skills you need, e.g. sql, excel, python" required>
+        <select id="experts-department"></select>
+        <label class="inline"><input type="checkbox" id="experts-available"> Available only</label>
+        <button type="submit">Find</button>
+      </form>
+      <p id="experts-summary" class="muted"></p>
+      <div id="experts"></div>
+    </section>
+
+    <section class="card">
+      <h2>Reporting path</h2>
+      <p class="muted">Who connects two people? Shows the escalation route through the closest shared manager.</p>
+      <form id="path-form" class="row-form">
+        <select id="path-from" required></select>
+        <span>to</span>
+        <select id="path-to" required></select>
+        <button type="submit">Find path</button>
+      </form>
+      <div id="path"></div>
+    </section>
+
+    <section class="card" id="details-card" hidden>
+      <h2>Employee details</h2>
+      <div id="details"></div>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/directory.js"></script>
+</body>
+</html>
