@@ -2,30 +2,30 @@
 # OWNER: Nouran — Organization Structure service on AWS
 # AWS services: DynamoDB (Departments + Roles tables), IAM (empdir-organization-role),
 #               Lambda (empdir-organization-api), CloudWatch Logs (14-day log retention)
-# Needs the API from infra/nour-api-gateway.sh to connect the routes.
+# Needs the API from infra/api-gateway.sh to connect the routes.
 #
-#   bash $INFRA/nouran-organization.sh
+#   bash $INFRA/organization-service.sh
 source "$(dirname "$0")/_lib.sh"
 check_floci
 
-say "Nouran 1/4  DynamoDB: Departments and Roles tables"
+say "Organization 1/4  DynamoDB: Departments and Roles tables"
 ensure_table "$DEPARTMENTS_TABLE"
 ensure_table "$ROLES_TABLE"
 
-say "Nouran 2/4  IAM: least-privilege role"
+say "Organization 2/4  IAM: least-privilege role"
 ensure_role "$ORGANIZATION_ROLE" empdir-organization-access $INFRA/iam/organization-policy.json
 
-say "Nouran 3/4  Lambda: $ORGANIZATION_FN"
+say "Organization 3/4  Lambda: $ORGANIZATION_FN"
 deploy_function "$ORGANIZATION_FN" "$ORGANIZATION_ROLE" organization
 
-say "Nouran 4/4  CloudWatch Logs: log group with 14-day retention"
+say "Organization 4/4  CloudWatch Logs: log group with 14-day retention"
 LOG_GROUP="/aws/lambda/$ORGANIZATION_FN"
 aws logs create-log-group --log-group-name "$LOG_GROUP" >/dev/null 2>&1 \
   && ok "log group $LOG_GROUP created" || skip "log group $LOG_GROUP already exists"
 aws logs put-retention-policy --log-group-name "$LOG_GROUP" --retention-in-days 14
 ok "logs kept for 14 days"
 
-say "Nouran: connect the Organization Structure routes to API Gateway"
+say "Organization: connect the Organization Structure routes to API Gateway"
 mapfile -t ROUTES < <(with_options \
   "GET /api/departments" \
   "POST /api/departments" \
@@ -38,4 +38,4 @@ mapfile -t ROUTES < <(with_options \
   "GET /api/org-chart")
 attach_routes "$ORGANIZATION_FN" "${ROUTES[@]}"
 
-say "Nouran: done"
+say "Organization: done"

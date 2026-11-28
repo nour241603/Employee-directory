@@ -18,9 +18,9 @@ Browser ──> S3 website (empdir-web)
 
 | Student | Script | AWS services in their own service |
 |---|---|---|
-| Jana | `jana-employees.sh` | DynamoDB `Employees`, Secrets Manager `empdir/auth-secret`, IAM `empdir-employees-role`, Lambda `empdir-employees-api` |
-| Nouran | `nouran-organization.sh` | DynamoDB `Departments` + `Roles`, IAM `empdir-organization-role`, Lambda `empdir-organization-api`, CloudWatch Logs (14-day retention) |
-| Nour | `nour-api-gateway.sh`, `nour-directory.sh`, `nour-website.sh` | API Gateway `empdir-http-api`, IAM `empdir-directory-role` (read-only), Lambda `empdir-directory-api`, S3 website `empdir-web` |
+| Jana | `employees-service.sh` | DynamoDB `Employees`, Secrets Manager `empdir/auth-secret`, IAM `empdir-employees-role`, Lambda `empdir-employees-api` |
+| Nouran | `organization-service.sh` | DynamoDB `Departments` + `Roles`, IAM `empdir-organization-role`, Lambda `empdir-organization-api`, CloudWatch Logs (14-day retention) |
+| Nour | `api-gateway.sh`, `directory-service.sh`, `website.sh` | API Gateway `empdir-http-api`, IAM `empdir-directory-role` (read-only), Lambda `empdir-directory-api`, S3 website `empdir-web` |
 
 Shared: `_lib.sh` (names + helpers), `deploy.sh` (runs everything), `seed-data.sh`, `check.sh`.
 
@@ -49,12 +49,12 @@ bash infra/deploy.sh          # everything, in order, then the checks
 Or one part at a time (in this order the first time):
 
 ```bash
-bash infra/nour-api-gateway.sh
-bash infra/jana-employees.sh
-bash infra/nouran-organization.sh
-bash infra/nour-directory.sh
+bash infra/api-gateway.sh
+bash infra/employees-service.sh
+bash infra/organization-service.sh
+bash infra/directory-service.sh
 bash infra/seed-data.sh
-bash infra/nour-website.sh
+bash infra/website.sh
 bash infra/check.sh
 ```
 

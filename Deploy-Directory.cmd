@@ -1,7 +1,8 @@
 @echo off
-title Deploy Nouran's services (Organization Structure)
+title Deploy (Search and Directory, API Gateway, website)
 cd /d "%~dp0"
 
+rem Owner: Nour. Creates the Search and Directory service, API Gateway and website in Floci.
 rem Find Docker, Node.js and Git even if this window started before they were installed.
 set "PATH=%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin;%ProgramFiles%\Docker\Docker\resources\bin;%ProgramFiles%\nodejs;%ProgramFiles%\Git\bin;%ProgramFiles%\Amazon\AWSCLIV2;%PATH%"
 set "BASH=%ProgramFiles%\Git\bin\bash.exe"
@@ -12,8 +13,8 @@ if not exist "%BASH%" (
 )
 
 echo.
-echo === Nouran: Organization Structure
-echo Creates in Floci: DynamoDB Departments and Roles, IAM role, Lambda empdir-organization-api, CloudWatch Logs, API routes
+echo === Deploying: Search and Directory, API Gateway, website
+echo Creates in Floci: API Gateway, IAM role, Lambda empdir-directory-api, API routes, S3 website
 echo.
 echo --- Checking Docker Desktop (it must say "Engine running")
 docker info >nul 2>&1
@@ -32,8 +33,8 @@ if errorlevel 1 (
 )
 timeout /t 8 /nobreak >nul
 
-echo --- Creating Nouran's services
-"%BASH%" -c "source infra/_lib.sh && check_floci && rm -f backend/lambda.zip && build_zip && bash infra/nouran-organization.sh"
+echo --- Creating the Search and Directory service, API Gateway and website
+"%BASH%" -c "source infra/_lib.sh && check_floci && rm -f backend/lambda.zip && bash infra/api-gateway.sh && build_zip && bash infra/directory-service.sh && bash infra/website.sh"
 if errorlevel 1 (
   echo.
   echo Something failed. Take a screenshot of this window and send it to Claude.
@@ -42,6 +43,6 @@ if errorlevel 1 (
 )
 
 echo.
-echo Done. Opening Floci's console: look under Serverless, DynamoDB, Identity and CloudWatch Logs.
+echo Done. Opening Floci's console: look under API Gateway, Serverless, Identity and Storage.
 start "" "http://localhost:4500"
 pause
