@@ -22,6 +22,14 @@
     <h1>Employees</h1>
     <div id="message" class="message" hidden></div>
 
+    <!-- Shown to HR only: self sign-ups waiting for approval -->
+    <section class="card" id="signups-card" hidden>
+      <h2>Sign-up requests <span id="signups-count" class="badge OnLeave"></span></h2>
+      <p class="muted">Choose a department and role, then approve. The new employee reports to the
+        department head automatically when the manager rules allow it.</p>
+      <div id="signup-list"></div>
+    </section>
+
     <section class="card">
       <h2>All employees</h2>
       <div id="employee-list"></div>

@@ -32,7 +32,7 @@ async function requireLogin(req, res, next) {
       throw new AppError(401, 'INVALID_TOKEN', 'Your login expired or is not valid. Log in again.');
     }
     const user = await employeeService().getEmployeeRaw(payload.sub);
-    if (!user || user.status === 'Left') {
+    if (!user || user.status === 'Left' || user.status === 'Pending') {
       throw new AppError(401, 'ACCOUNT_INACTIVE', 'This account can no longer log in.');
     }
     req.user = { id: user.id, name: user.name, role: user.accessRole || 'EMPLOYEE' };

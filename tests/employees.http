@@ -306,3 +306,55 @@ Authorization: Bearer {{empLogin.response.body.token}}
 ### P9 Karim reads someone else's history -> 404 (existence not leaked)
 GET {{baseUrl}}/api/employees/EMP-007/promotions
 Authorization: Bearer {{empLogin.response.body.token}}
+
+
+### ---------- Self sign-up with HR approval ----------
+
+### S1 Weak password -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/employees/signup
+Content-Type: application/json
+
+{ "name": "Lina Samir", "email": "lina.samir@example.com", "password": "short" }
+
+### S2 Sign up (trying to be HR is ignored) -> 201, status Pending
+# @name signup
+POST {{baseUrl}}/api/employees/signup
+Content-Type: application/json
+
+{ "name": "Lina Samir", "email": "lina.samir@example.com", "password": "secret123", "accessRole": "HR" }
+
+### S3 Same email again -> 409 EMAIL_TAKEN
+POST {{baseUrl}}/api/employees/signup
+Content-Type: application/json
+
+{ "name": "Lina Again", "email": "lina.samir@example.com", "password": "secret123" }
+
+### S4 Pending account cannot log in -> 401 ACCOUNT_PENDING
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "lina.samir@example.com", "password": "secret123" }
+
+### S5 HR lists sign-up requests -> 200
+GET {{baseUrl}}/api/employees/signups
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### S6 HR approves into Engineering as Junior Specialist -> 200, reports to the department head
+POST {{baseUrl}}/api/employees/{{signup.response.body.id}}/approve
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "departmentId": "DEP-eng", "roleId": "ROL-junior" }
+
+### S7 Approving twice -> 409 NOT_PENDING
+POST {{baseUrl}}/api/employees/{{signup.response.body.id}}/approve
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{}
+
+### S8 Now the login works -> 200 (accessRole EMPLOYEE)
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "lina.samir@example.com", "password": "secret123" }

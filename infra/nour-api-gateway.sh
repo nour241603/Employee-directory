@@ -25,4 +25,4 @@ else
 fi
 
 echo
-echo "   API URL: http://${API_ID}.execute-api.localhost.floci.io:4566"
+echo "   API URL: http://localhost:4566/_aws/execute-api/${API_ID}/\$default"

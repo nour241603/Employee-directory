@@ -15,6 +15,12 @@ const { requireLogin, requireRole, isSelfOrHR } = require('../middleware/auth');
 const router = express.Router();
 
 router.post('/login', controller.login);
+router.post('/signup', controller.signUp);   // public: creates a Pending account only
+
+// HR reviews self sign-ups (before '/:id' so "signups" is not read as an id)
+router.get('/signups', requireLogin, requireRole('HR'), controller.listSignUps);
+router.post('/:id/approve', requireLogin, requireRole('HR'), controller.approveSignUp);
+router.post('/:id/reject', requireLogin, requireRole('HR'), controller.rejectSignUp);
 
 router.get('/', requireLogin, controller.listEmployees);
 router.post('/', requireLogin, requireRole('HR'), controller.createEmployee);

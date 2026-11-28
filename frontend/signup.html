@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign up - Employee Directory</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">Employee Directory</span>
+    <nav>
+      <a href="index.html">Directory</a>
+      <a href="employees.html">Employees</a>
+      <a href="organization.html">Organization</a>
+      <a href="login.html" class="active">Login</a>
+    </nav>
+    <span id="api-status" class="api-status">Checking API...</span>
+  </header>
+
+  <main>
+    <h1>Request an account</h1>
+    <div id="message" class="message" hidden></div>
+    <section class="card">
+      <!-- OWNER: Jana - self sign-up; the account stays Pending until HR approves it -->
+      <p class="muted">New staff can ask for an account here. HR checks the request, gives you a
+        department and role, and then you can log in.</p>
+      <form id="signup-form">
+        <label for="signup-name">Full name</label>
+        <input id="signup-name" required minlength="2" maxlength="80" autocomplete="name">
+        <label for="signup-email">Work email</label>
+        <input id="signup-email" type="email" required autocomplete="email">
+        <label for="signup-phone">Phone (optional)</label>
+        <input id="signup-phone" type="tel" placeholder="+20 100 000 0000">
+        <label for="signup-skills">Skills (optional, comma separated)</label>
+        <input id="signup-skills" placeholder="sql, excel, communication">
+        <label for="signup-password">Password</label>
+        <input id="signup-password" type="password" required minlength="8" maxlength="72" autocomplete="new-password">
+        <p class="muted">At least 8 characters, with a letter and a number.</p>
+        <label for="signup-confirm">Confirm password</label>
+        <input id="signup-confirm" type="password" required minlength="8" maxlength="72" autocomplete="new-password">
+        <button type="submit">Send request</button>
+      </form>
+      <p>Already approved? <a href="login.html">Log in</a></p>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/signup.js"></script>
+</body>
+</html>
