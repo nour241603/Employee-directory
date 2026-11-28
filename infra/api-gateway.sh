@@ -2,11 +2,11 @@
 # OWNER: Nour — API Gateway (HTTP API): the one public address for all three services.
 # Run this BEFORE the three service scripts, so they can add their routes to it.
 #
-#   bash $INFRA/nour-api-gateway.sh
+#   bash $INFRA/api-gateway.sh
 source "$(dirname "$0")/_lib.sh"
 check_floci
 
-say "Nour  API Gateway: $API_NAME"
+say "API Gateway: $API_NAME"
 API_ID=$(api_id)
 if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
   skip "API $API_NAME already exists ($API_ID)"

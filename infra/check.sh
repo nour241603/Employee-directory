@@ -9,6 +9,9 @@ check_floci
 require_api
 
 PASS=0; FAIL=0
+# Answers are saved inside the project, not /tmp: Windows' curl.exe (used by Git Bash) cannot write to /tmp.
+BODY="infra/.check-response.json"
+trap 'rm -f "$BODY"' EXIT
 pass() { printf '   \033[32mPASS\033[0m  %s\n' "$1"; PASS=$((PASS + 1)); }
 fail() { printf '   \033[31mFAIL\033[0m  %s  (%s)\n' "$1" "$2"; FAIL=$((FAIL + 1)); }
 
@@ -16,11 +19,11 @@ TOKEN=""
 # expect <name> <expected-status> <method> <path> [json-body]   (sends the login token if we have one)
 expect() {
   local name=$1 want=$2 method=$3 path=$4 body=${5:-}
-  local args=(-s -o /tmp/empdir-body.json -w '%{http_code}' -X "$method" "$API_URL$path")
+  local args=(-s -o $BODY -w '%{http_code}' -X "$method" "$API_URL$path")
   [ -n "$TOKEN" ] && args+=(-H "Authorization: Bearer $TOKEN")
   [ -n "$body" ] && args+=(-H 'Content-Type: application/json' -d "$body")
   local got; got=$(curl "${args[@]}")
-  if [ "$got" = "$want" ]; then pass "$name"; else fail "$name" "expected $want, got $got: $(head -c 160 /tmp/empdir-body.json)"; fi
+  if [ "$got" = "$want" ]; then pass "$name"; else fail "$name" "expected $want, got $got: $(head -c 160 $BODY)"; fi
 }
 
 say "Infrastructure"
@@ -34,42 +37,42 @@ done
 routes=$(aws apigatewayv2 get-routes --api-id "$API_ID" --query "length(Items)" --output text)
 [ "${routes:-0}" -ge 30 ] && pass "API Gateway has $routes routes" || fail "API Gateway routes" "only ${routes:-0}"
 
-say "Login (Jana's function, signing key from Secrets Manager)"
+say "Login (Employee Management function, signing key from Secrets Manager)"
 expect "Health check (directory function)"            200 GET  /api/health
-grep -q '"runtime":"lambda"' /tmp/empdir-body.json && pass "Health says it runs on Lambda" || fail "Health runtime" "$(cat /tmp/empdir-body.json)"
+grep -q '"runtime":"lambda"' $BODY && pass "Health says it runs on Lambda" || fail "Health runtime" "$(cat $BODY)"
 expect "No token -> 401"                              401 GET  /api/employees
 expect "Wrong password -> 401"                        401 POST /api/employees/login '{"email":"salma.nabil@example.com","password":"wrong"}'
 expect "HR login (Salma, demo password)"              200 POST /api/employees/login '{"email":"salma.nabil@example.com","password":"password123"}'
-TOKEN=$(sed -n 's/.*"token":"\([^"]*\)".*/\1/p' /tmp/empdir-body.json)
+TOKEN=$(sed -n 's/.*"token":"\([^"]*\)".*/\1/p' $BODY)
 [ -n "$TOKEN" ] && pass "Got a login token" || fail "Login token" "no token in the answer; did seed-data.sh run?"
 
 say "Each service through API Gateway (logged in as HR)"
-expect "Jana: list employees"                         200 GET  /api/employees
-expect "Jana: invalid employee rejected"              400 POST /api/employees '{"name":"N","email":"bad"}'
-expect "Jana: circular reporting blocked"             409 PUT  /api/employees/EMP-001/manager '{"managerId":"EMP-003"}'
-expect "Nouran: list departments"                     200 GET  /api/departments
-expect "Nouran: department with staff not deleted"    409 DELETE /api/departments/DEP-eng
-expect "Nouran: org chart"                            200 GET  /api/org-chart
-expect "Nour: directory search"                       200 GET  "/api/directory?q=omar"
-expect "Nour: expert finder"                          200 GET  "/api/directory/experts?skills=sql,aws"
-expect "Nour: reporting path"                         200 GET  "/api/directory/path?from=EMP-003&to=EMP-005"
+expect "Employees: list employees"                         200 GET  /api/employees
+expect "Employees: invalid employee rejected"              400 POST /api/employees '{"name":"N","email":"bad"}'
+expect "Employees: circular reporting blocked"             409 PUT  /api/employees/EMP-001/manager '{"managerId":"EMP-003"}'
+expect "Organization: list departments"                     200 GET  /api/departments
+expect "Organization: department with staff not deleted"    409 DELETE /api/departments/DEP-eng
+expect "Organization: org chart"                            200 GET  /api/org-chart
+expect "Directory: search"                       200 GET  "/api/directory?q=omar"
+expect "Directory: expert finder"                          200 GET  "/api/directory/experts?skills=sql,aws"
+expect "Directory: reporting path"                         200 GET  "/api/directory/path?from=EMP-003&to=EMP-005"
 expect "Unknown route stopped by API Gateway"         404 GET  /api/nothing-here
 
 say "Services working together"
 email="check.$(date +%s)@example.com"
-code=$(curl -s -o /tmp/empdir-body.json -w '%{http_code}' -X POST "$API_URL/api/employees" \
+code=$(curl -s -o $BODY -w '%{http_code}' -X POST "$API_URL/api/employees" \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d "{\"name\":\"Cloud Check\",\"email\":\"$email\",\"departmentId\":\"DEP-hr\",\"roleId\":\"ROL-junior\",\"skills\":[\"cloudcheck\"]}")
-id=$(sed -n 's/.*"id":"\(EMP-[^"]*\)".*/\1/p' /tmp/empdir-body.json)
+id=$(sed -n 's/.*"id":"\(EMP-[^"]*\)".*/\1/p' $BODY)
 if [ "$code" = "201" ] && [ -n "$id" ]; then
-  pass "Jana's function registered $id (auto manager: department head)"
-  expect "Nour's function finds the new employee"     200 GET "/api/directory/experts?skills=cloudcheck"
-  grep -q "$id" /tmp/empdir-body.json && pass "New employee appears in the expert finder" || fail "Expert finder" "employee missing"
-  expect "Nouran's function shows them in the chart" 200 GET "/api/org-chart?departmentId=DEP-hr"
-  grep -q "$id" /tmp/empdir-body.json && pass "New employee appears in the org chart" || fail "Org chart" "employee missing"
+  pass "Employee Management registered $id (auto manager: department head)"
+  expect "Directory finds the new employee"     200 GET "/api/directory/experts?skills=cloudcheck"
+  grep -q "$id" $BODY && pass "New employee appears in the expert finder" || fail "Expert finder" "employee missing"
+  expect "Organization chart shows them" 200 GET "/api/org-chart?departmentId=DEP-hr"
+  grep -q "$id" $BODY && pass "New employee appears in the org chart" || fail "Org chart" "employee missing"
   expect "Offboard the test employee"                200 PATCH "/api/employees/$id/status" '{"status":"Left"}'
 else
-  fail "Register test employee" "got $code: $(head -c 160 /tmp/empdir-body.json)"
+  fail "Register test employee" "got $code: $(head -c 160 $BODY)"
 fi
 
 say "CORS (only our website may call the API from a browser)"
@@ -85,7 +88,7 @@ for f in index.html employees.html organization.html js/config.js js/api.js css/
   aws s3 ls "s3://$BUCKET/$f" >/dev/null 2>&1 && pass "s3://$BUCKET/$f" || fail "s3://$BUCKET/$f" "not uploaded"
 done
 aws s3 cp "s3://$BUCKET/js/config.js" - 2>/dev/null | grep -q "$API_ID" \
-  && pass "Uploaded config.js points at this API" || fail "Uploaded config.js" "does not contain $API_ID; run bash $INFRA/nour-website.sh"
+  && pass "Uploaded config.js points at this API" || fail "Uploaded config.js" "does not contain $API_ID; run bash $INFRA/website.sh"
 
 echo
 printf 'Result: \033[32m%d passed\033[0m, \033[31m%d failed\033[0m\n' "$PASS" "$FAIL"
