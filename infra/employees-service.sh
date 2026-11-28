@@ -34,6 +34,7 @@ say "Employees: connect the Employee Management routes to API Gateway"
 mapfile -t ROUTES < <(with_options \
   "POST /api/employees/login" \
   "POST /api/employees/signup" \
+  "PATCH /api/employees/me/password" \
   "GET /api/employees/signups" \
   "POST /api/employees/{id}/approve" \
   "POST /api/employees/{id}/reject" \

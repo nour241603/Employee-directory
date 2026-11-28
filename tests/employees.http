@@ -358,3 +358,68 @@ POST {{baseUrl}}/api/employees/login
 Content-Type: application/json
 
 { "email": "lina.samir@example.com", "password": "secret123" }
+
+### ---------- Password change (own password only) ----------
+
+### CP1 No token -> 401 NOT_LOGGED_IN
+PATCH {{baseUrl}}/api/employees/me/password
+Content-Type: application/json
+
+{ "currentPassword": "password123", "newPassword": "newPass2026" }
+
+### CP2 Wrong current password -> 401 WRONG_PASSWORD
+PATCH {{baseUrl}}/api/employees/me/password
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "currentPassword": "not-my-password", "newPassword": "newPass2026" }
+
+### CP3 Weak new password (no number) -> 400 VALIDATION_ERROR
+PATCH {{baseUrl}}/api/employees/me/password
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "currentPassword": "password123", "newPassword": "onlyletters" }
+
+### CP4 New password same as the current one -> 400 VALIDATION_ERROR
+PATCH {{baseUrl}}/api/employees/me/password
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "currentPassword": "password123", "newPassword": "password123" }
+
+### CP5 Karim changes his own password -> 200
+PATCH {{baseUrl}}/api/employees/me/password
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "currentPassword": "password123", "newPassword": "newPass2026" }
+
+### CP6 His old token no longer works -> 401 INVALID_TOKEN (wait 2 seconds after CP5 before sending)
+GET {{baseUrl}}/api/employees
+Authorization: Bearer {{empLogin.response.body.token}}
+
+### CP7 Old password no longer works -> 401 LOGIN_FAILED
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "karim.said@example.com", "password": "password123" }
+
+### CP8 New password works -> 200
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "karim.said@example.com", "password": "newPass2026" }
+
+### CP9 HR registers Mona -> 201, mustChangePassword true (she has the default password)
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Mona Adel", "email": "mona.adel@example.com", "departmentId": "DEP-sales" }
+
+### CP10 Mona logs in with the default password -> 200, user.mustChangePassword true (the website sends her to change it)
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "mona.adel@example.com", "password": "password123" }

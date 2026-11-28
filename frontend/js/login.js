@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await apiRequest('/api/employees/login', { method: 'POST', body: { email, password } });
       sessionStorage.setItem('token', result.token);
       sessionStorage.setItem('userName', result.user.name);
+      // Accounts created by HR start with the shared default password: replace it first.
+      if (result.user.mustChangePassword) {
+        showMessage(`Welcome, ${result.user.name}! Please choose your own password first...`);
+        setTimeout(() => { window.location.href = 'change-password.html?first=1'; }, 800);
+        return;
+      }
       showMessage(`Welcome, ${result.user.name}! Taking you to the directory...`);
       setTimeout(() => { window.location.href = 'index.html'; }, 800);
     } catch (error) {

@@ -35,6 +35,16 @@ async function requireLogin(req, res, next) {
     if (!user || user.status === 'Left' || user.status === 'Pending') {
       throw new AppError(401, 'ACCOUNT_INACTIVE', 'This account can no longer log in.');
     }
+    // JWT iat is stored in whole seconds. Treat every token from the second in which
+    // the password changed as old; this avoids leaving an old token valid due to rounding.
+    if (user.passwordChangedAt && payload.iat < Math.ceil(Date.parse(user.passwordChangedAt) / 1000)) {
+      throw new AppError(401, 'INVALID_TOKEN', 'Your password was changed. Log in again.');
+    }
+    // Newly registered employees can only replace the shared temporary password.
+    // Check the router-relative path so this remains correct under /api/employees.
+    if (user.mustChangePassword && !(req.method === 'PATCH' && req.path === '/me/password')) {
+      throw new AppError(403, 'PASSWORD_CHANGE_REQUIRED', 'Change your temporary password before using the directory.');
+    }
     req.user = { id: user.id, name: user.name, role: user.accessRole || 'EMPLOYEE' };
     next();
   } catch (error) {

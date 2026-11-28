@@ -117,6 +117,31 @@ async function signUp(req, res, next) {
   }
 }
 
+/* ---------- Password change (logged in, own password only) ---------- */
+
+async function changePassword(req, res, next) {
+  try {
+    requireJson(req);
+    const { currentPassword, newPassword } = req.body;
+    const errors = [];
+    if (typeof currentPassword !== 'string' || currentPassword.length === 0) {
+      errors.push({ field: 'currentPassword', message: 'Current password is required.' });
+    }
+    if (typeof newPassword !== 'string' || !PASSWORD_PATTERN.test(newPassword)) {
+      errors.push({ field: 'newPassword', message: 'New password must be 8 to 72 characters with at least one letter and one number.' });
+    } else if (newPassword === currentPassword) {
+      errors.push({ field: 'newPassword', message: 'The new password must be different from the current one.' });
+    }
+    if (errors.length) throw validationError(errors);
+
+    // req.user.id comes from the verified login token: only the caller's own password changes.
+    await employeeService.changePassword(req.user.id, currentPassword, newPassword);
+    res.status(200).json({ message: 'Password changed. Log in again with your new password.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function listSignUps(req, res, next) {
   try {
     res.status(200).json(await employeeService.listSignUps());
@@ -313,6 +338,7 @@ async function getPromotionHistory(req, res, next) {
 }
 
 module.exports = {
+  changePassword,
   signUp,
   listSignUps,
   approveSignUp,

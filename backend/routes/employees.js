@@ -1,5 +1,6 @@
 // OWNER: Jana - Employee Management service
 //   Login:                  POST /login (public)
+//   Password change:        PATCH /me/password (logged in, own password only)
 //   1. Onboarding:          POST /, GET /, GET /:id, PATCH /:id
 //   2. Status workflow:     PATCH /:id/status, DELETE /:id (only after leaving)
 //   3. Manager assignment:  PUT /:id/manager, POST /:id/reassign-team, GET /:id/team
@@ -16,6 +17,7 @@ const router = express.Router();
 
 router.post('/login', controller.login);
 router.post('/signup', controller.signUp);   // public: creates a Pending account only
+router.patch('/me/password', requireLogin, controller.changePassword); // the caller's own password
 
 // HR reviews self sign-ups (before '/:id' so "signups" is not read as an id)
 router.get('/signups', requireLogin, requireRole('HR'), controller.listSignUps);

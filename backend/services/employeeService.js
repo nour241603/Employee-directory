@@ -21,8 +21,10 @@
 //     internally, through getEmployeeRaw / getEmployeeOrFailRaw.
 //   - ids, status, accessRole and timestamps are never taken from the request body;
 //     the controller whitelists the editable fields and this file sets the rest.
-//   - a new employee gets the default password below (hashed with bcrypt); HR tells
-//     them to change it with IT on first login.
+//   - a new employee gets the default password below (hashed with bcrypt) and
+//     mustChangePassword: true, so the website sends them to change it on first login.
+//   - changePassword only ever changes the caller's own password, after checking the
+//     current one; tokens issued before the change stop working (see middleware/auth.js).
 //
 // Other services read employee data through these functions, never the table directly.
 const { randomUUID } = require('crypto');
@@ -129,6 +131,21 @@ async function login(email, password) {
   }
   const token = jwt.sign({ sub: user.id }, process.env.AUTH_SECRET, { expiresIn: '12h' });
   return { token, user: stripPassword(user) };
+}
+
+/* ---------- Password change (the logged-in user's own password only) ---------- */
+// The controller passes req.user.id, never an id from the URL or the body, so nobody
+// can change another person's password. The new password's format is checked there.
+async function changePassword(id, currentPassword, newPassword) {
+  const user = await getEmployeeOrFailRaw(id);
+  const ok = await bcrypt.compare(currentPassword, user.passwordHash || await getDummyHash());
+  if (!ok) {
+    throw new AppError(401, 'WRONG_PASSWORD', 'Your current password is not correct.');
+  }
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.passwordChangedAt = new Date().toISOString(); // older tokens are refused from now on
+  user.mustChangePassword = false;
+  await save(user);
 }
 
 /* ---------- Self sign-up (HR approval required) ---------- */
@@ -320,6 +337,7 @@ async function createEmployee(data) {
     status: 'Active',
     accessRole: 'EMPLOYEE',
     passwordHash: await bcrypt.hash(DEFAULT_PASSWORD, 10),
+    mustChangePassword: true, // they got the shared default password, so it must be replaced
     createdAt: now
   };
 
@@ -582,6 +600,7 @@ module.exports = {
   getEmployeeOrFail,
   getTeam,
   login,
+  changePassword,
   signUp,
   listSignUps,
   approveSignUp,
