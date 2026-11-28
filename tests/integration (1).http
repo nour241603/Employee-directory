@@ -1,0 +1,57 @@
+# OWNER: Nour - end-to-end flow across the three services (run in order, on fresh sample data)
+# Run in order on fresh sample data (npm run setup-db). Demo password for every sample employee: password123
+@baseUrl = http://localhost:3000
+
+### Login as HR (Salma) -> 200
+# @name hrLogin
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "salma.nabil@example.com", "password": "password123" }
+
+### I1 Organization: create a department
+# @name dept
+POST {{baseUrl}}/api/departments
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Marketing", "description": "Brand and campaigns" }
+
+### I2 Employee Management: register an employee in it
+# @name emp
+POST {{baseUrl}}/api/employees
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Rana Khaled", "email": "rana.khaled@example.com", "skills": ["design", "seo"],
+  "departmentId": "{{dept.response.body.id}}" }
+
+### I3 Employee Management: assign a manager
+PUT {{baseUrl}}/api/employees/{{emp.response.body.id}}/manager
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "managerId": "EMP-000" }
+
+### I4 Organization: give the employee a role
+PUT {{baseUrl}}/api/employees/{{emp.response.body.id}}/role
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-senior" }
+
+### I5 Directory: the new employee is searchable with department, role and manager names
+GET {{baseUrl}}/api/directory?q=rana
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### I6 Directory: and is found as an SEO expert
+GET {{baseUrl}}/api/directory/experts?skills=seo
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### I7 Organization: and appears in the org chart under Layla Hassan
+GET {{baseUrl}}/api/org-chart
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### I8 Organization: the department cannot be deleted while Rana is in it -> 409 DEPARTMENT_NOT_EMPTY
+DELETE {{baseUrl}}/api/departments/{{dept.response.body.id}}
+Authorization: Bearer {{hrLogin.response.body.token}}

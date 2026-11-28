@@ -1,0 +1,91 @@
+# OWNER: Nour - Search & Directory tests (VS Code REST Client: click "Send Request")
+# Run in order on fresh sample data (npm run setup-db). Demo password for every sample employee: password123
+@baseUrl = http://localhost:3000
+
+### Login as HR (Salma) -> 200
+# @name hrLogin
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "salma.nabil@example.com", "password": "password123" }
+
+### ---------- Function 1: Directory search ----------
+
+### D1 First page (people who left are hidden) -> 200
+GET {{baseUrl}}/api/directory
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D2 Text search -> 200
+GET {{baseUrl}}/api/directory?q=omar
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D3 Department + skill filter -> 200
+GET {{baseUrl}}/api/directory?department=DEP-eng&skill=sql
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D4 Former staff only -> 200
+GET {{baseUrl}}/api/directory?status=Left
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D5 Sorted by seniority, paged -> 200
+GET {{baseUrl}}/api/directory?sort=seniority&page=2&limit=3
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D6 Invalid options -> 400 VALIDATION_ERROR
+GET {{baseUrl}}/api/directory?page=0&limit=500&sort=height
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D7 Page past the end -> 400 PAGE_OUT_OF_RANGE
+GET {{baseUrl}}/api/directory?page=50
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Function 2: Expert finder ----------
+
+### D8 Rank by skills; shows missing skills and skills nobody has -> 200
+GET {{baseUrl}}/api/directory/experts?skills=sql,aws,python,kubernetes
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D9 Only available people in one department -> 200
+GET {{baseUrl}}/api/directory/experts?skills=crm,communication&department=DEP-sales&available=true
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D10 No skills given -> 400 VALIDATION_ERROR
+GET {{baseUrl}}/api/directory/experts
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Function 3: Reporting path finder ----------
+
+### D11 Two people in different departments -> 200, shared manager Layla Hassan
+GET {{baseUrl}}/api/directory/path?from=EMP-003&to=EMP-005
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D12 Employee to their manager -> 200, "is above"
+GET {{baseUrl}}/api/directory/path?from=EMP-007&to=EMP-006
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D13 Same person -> 400 SAME_EMPLOYEE
+GET {{baseUrl}}/api/directory/path?from=EMP-003&to=EMP-003
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D14 Missing "to" -> 400 VALIDATION_ERROR
+GET {{baseUrl}}/api/directory/path?from=EMP-003
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Profile view ----------
+
+### D15 Details with reporting line and team -> 200
+GET {{baseUrl}}/api/directory/EMP-003
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D16 Unknown employee -> 404 EMPLOYEE_NOT_FOUND
+GET {{baseUrl}}/api/directory/EMP-nope
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### D17 Filter values for the page -> 200
+GET {{baseUrl}}/api/directory/filters
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Security ----------
+
+### D18 No token -> 401
+GET {{baseUrl}}/api/directory
