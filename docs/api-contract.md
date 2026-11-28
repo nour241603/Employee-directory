@@ -39,7 +39,22 @@ valid email, phone 7-20 digits, up to 20 skills of 1-40 chars, ids `A-Za-z0-9-` 
 
 ## Organization Structure (Nouran)
 
-(to be filled by Nouran)
+All routes need a login token (`Authorization: Bearer <token>`). Missing or invalid token: `401`.
+Changes (POST, PUT, DELETE) are HR only: anyone else gets `403 NOT_ALLOWED`.
+
+| Method | Path | Who | What it does |
+|---|---|---|---|
+| GET | `/api/departments` | logged in | All departments, each with `employeeCount` (people who left or are pending are not counted). |
+| POST | `/api/departments` | HR | Body: `{ "name", "description"? }`. Name 2-60 chars, unique ignoring letter case (`409 DEPARTMENT_EXISTS`). `201` created. |
+| PUT | `/api/departments/:id` | HR | Body: `{ "name"?, "description"?, "headId"? }`. The head must be an existing employee in this department (`409 HEAD_NOT_IN_DEPARTMENT`) who is Active (`409 HEAD_NOT_ACTIVE`). Unknown department: `404`. |
+| DELETE | `/api/departments/:id` | HR | Only when nobody works there any more: `409 DEPARTMENT_NOT_EMPTY` otherwise. Unknown department: `404`. |
+| GET | `/api/roles` | logged in | All roles, highest level first, each with `employeeCount`. |
+| POST | `/api/roles` | HR | Body: `{ "title", "level" }`. Title 2-60 chars, unique (`409 ROLE_EXISTS`). Level 1 (junior) to 10 (top). `201` created. |
+| DELETE | `/api/roles/:id` | HR | Only when nobody has the role: `409 ROLE_IN_USE` otherwise. Unknown role: `404`. |
+| PUT | `/api/employees/:id/role` | HR | Body: `{ "roleId" }`. The new role must rank below the manager's role (`409 ROLE_ABOVE_MANAGER`) and above the roles of everyone who reports to this employee (`409 ROLE_BELOW_TEAM`). A person who left: `409 EMPLOYEE_LEFT`. Unknown employee or role: `404`. |
+| GET | `/api/org-chart` | logged in | Optional `?departmentId=`. Returns `{ "departmentId", "totalEmployees", "roots": [ { id, name, role, department, status, "reports": [ ... ] } ] }`, built live from the reporting lines and sorted by name. People who left or are pending are not shown. Unknown department: `404`. |
+
+Bad input on any route: `400 VALIDATION_ERROR` with the problem fields in `details`.
 
 ## Search & Directory (Nour)
 
