@@ -1,47 +1,51 @@
-# Nour - files to add (Search & Directory)
+# Employee Directory & Org Chart (Group 13)
 
-All files were tested against the project code on Nouran's laptop: every test gives the expected answer.
+Introduction to Cloud Computing (25CSCI37H): a serverless web application deployed on **Floci**
+(the AWS emulator): Lambda, API Gateway, DynamoDB, S3, IAM, Secrets Manager and CloudWatch Logs.
 
-| File in this folder | Put it at (in the project) | What it is |
+HR manages employees, departments and roles, and the system checks the company rules on every change.
+Every employee can search the directory, find experts by skill, see how two people are connected and
+view a live organization chart.
+
+## Team and services
+
+| Student | Service | Main files |
 |---|---|---|
-| `tests/directory.http` | `tests/directory.http` (new file) | 18 tests D1-D18 for your three functions and the profile view, plus a no-token (401) test |
-| `tests/integration.http` | `tests/integration.http` (new file) | I1-I8: one flow through all three services (department -> employee -> manager -> role -> search -> experts -> org chart -> delete blocked) |
-| `backend/events/directory-search.json` | `backend/events/directory-search.json` (replace the empty file) | Lambda test event for `empdir-directory-api` |
-| `api-contract-section.md` | `docs/api-contract.md` | Replace the lines `## Search & Directory (Nour)` and `(to be filled by Nour)` with this whole text |
+| Jana Mostafa | Employee Management: onboarding and sign-up approval, status workflow, manager rules, promotions, login and password change | `backend/*/employees*`, `middleware/auth.js`, `frontend/employees.html`, `login.html`, `signup.html`, `change-password.html` |
+| Nouran Khaled | Organization Structure: departments, roles and role rules, org chart | `backend/*/organization*`, `frontend/organization.html` |
+| Nour Ahmed | Search & Directory: search, expert finder, reporting path, profile | `backend/*/directory*`, `frontend/index.html` |
 
-## Where each file goes in VS Code
+## Run it (Windows)
 
-```
-Employee-directory/
-├─ backend/
-│  └─ events/directory-search.json    REPLACE the empty file
-├─ tests/
-│  ├─ directory.http                  NEW
-│  └─ integration.http                NEW
-└─ docs/api-contract.md               EDIT: replace "## Search & Directory (Nour)" and
-                                      "(to be filled by Nour)" with all of api-contract-section.md
-```
+Needs Docker Desktop, Git for Windows (Git Bash) and Node.js.
 
-## Run the tests
-1. Install the **REST Client** extension in VS Code.
-2. Fresh sample data: in `backend`, run `npm run setup-db`, then `npm run dev`.
-3. Open a `.http` file and click **Send Request** above each block, top to bottom (the login first). Run `integration.http` on fresh data too.
-4. Against Floci instead: change the `@baseUrl` line to `http://localhost:4566/_aws/execute-api/<API-ID>/$default`.
+1. Double-click **`Start-Floci.cmd`**. It starts Floci in Docker, deploys everything with
+   `infra/deploy.sh` and opens the website at `http://localhost:4566/empdir-web/index.html`.
+2. Optional public link: download `cloudflared-windows-amd64.exe` to Downloads, then double-click
+   **`Public-Link.cmd`** and open the `https://....trycloudflare.com` address it prints.
+   Only the website and the API are reachable through it.
+3. Redeploy one service after a change: `Deploy-Employees.cmd`, `Deploy-Organization.cmd` or
+   `Deploy-Directory.cmd`.
 
-## Use the Lambda test event
-Log in, copy the token into the file in place of `REPLACE-WITH-A-REAL-LOGIN-TOKEN`, then:
+Demo login: any sample employee e-mail with the password `password123`
+(HR: `salma.nabil@example.com`). Floci keeps its data in memory, so run `Start-Floci.cmd` again after a restart.
+
+Run without the cloud (local API on port 3000):
+
 ```bash
-aws lambda invoke --function-name empdir-directory-api --payload fileb://backend/events/directory-search.json out.json --endpoint-url http://localhost:4566
+cd backend
+cp .env.example .env
+npm install
+npm run setup-db
+npm run dev
 ```
-Real token: 200 with Karim Said found. Without a real token: 401, which proves the login check. Put the placeholder back before committing (never commit a real token).
 
-## Commit from your own branch
-```bash
-git checkout main
-git pull origin main
-git checkout -b nour-tests
-git add tests/directory.http tests/integration.http backend/events/directory-search.json docs/api-contract.md
-git commit -m "Directory: tests, integration flow, Lambda test event and API contract"
-git push -u origin nour-tests
-```
-Then open a pull request on GitHub and merge it.
+## Folders
+
+| Folder | What is in it |
+|---|---|
+| `backend/` | Express API: `routes/` → `controllers/` (input checks) → `services/` (business rules) → `db/dynamo.js` |
+| `frontend/` | HTML, CSS and JavaScript pages |
+| `infra/` | One deploy script per service, IAM policies, safety filter for the public link (see `infra/README.md`) |
+| `tests/` | `employees.http`, `organization.http`, `directory.http`, `integration.http` (VS Code REST Client) |
+| `docs/api-contract.md` | Every endpoint, written by its owner |

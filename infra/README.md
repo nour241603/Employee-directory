@@ -39,7 +39,6 @@ Each role may write only its own function's logs. Floci stores these permissions
 Git Bash, in the project folder, with Docker Desktop running:
 
 ```bash
-# once: copy infra/floci/docker-compose.yml from the Lab 7 project
 docker compose -f infra/floci/docker-compose.yml up -d
 export AWS_PROFILE=floci
 
@@ -78,11 +77,11 @@ aws logs describe-log-groups --query "logGroups[].[logGroupName,retentionInDays]
 bash infra/check.sh            # PASS/FAIL list: screenshot it
 ```
 
-Also screenshot Floci Dash (`http://localhost:4566/_floci/ui`) and the website showing
+Also screenshot the Floci console (`http://localhost:4500`) and the website showing
 "API online: lambda (production)".
 
 ## Requirements on the code
 
-- `backend/lambda.js` must exist (not `lamda.js`); the handler is `lambda.handler`.
+- The Lambda handler is `lambda.handler` (`backend/lambda.js`).
 - The table names come from `EMPLOYEES_TABLE`, `DEPARTMENTS_TABLE`, `ROLES_TABLE` (see `backend/db/dynamo.js`).
 - `AUTH_SECRET` and `CORS_ORIGINS` are set on each function by the scripts; nothing secret is in Git.
