@@ -38,6 +38,7 @@ const DEFAULT_PASSWORD = process.env.DEFAULT_EMPLOYEE_PASSWORD || 'password123';
 
 const STATUSES = ['Active', 'OnLeave', 'Left'];
 const ALLOWED_MOVES = {
+  Pending: [], // a self sign-up leaves Pending only through approveSignUp / rejectSignUp
   Active: ['OnLeave', 'Left'],
   OnLeave: ['Active', 'Left'],
   Left: [] // final
@@ -57,8 +58,10 @@ function stripPassword(employee) {
 
 /* ---------- Reading ---------- */
 
+// Sign-ups waiting for HR approval are not employees yet: they are left out of every
+// list, so they never appear in the directory, the org chart, counts or manager choices.
 async function listEmployees() {
-  return (await scanAll(TABLE)).map(stripPassword);
+  return (await scanAll(TABLE)).filter((e) => e.status !== 'Pending').map(stripPassword);
 }
 
 // Everyone who still works here (used for counts, charts and search).
@@ -120,8 +123,111 @@ async function login(email, password) {
   if (user.status === 'Left') {
     throw new AppError(401, 'ACCOUNT_INACTIVE', 'This account can no longer log in.');
   }
+  // Checked only after the password matched, so it never reveals which emails exist.
+  if (user.status === 'Pending') {
+    throw new AppError(401, 'ACCOUNT_PENDING', 'Your sign-up is waiting for HR approval.');
+  }
   const token = jwt.sign({ sub: user.id }, process.env.AUTH_SECRET, { expiresIn: '12h' });
   return { token, user: stripPassword(user) };
+}
+
+/* ---------- Self sign-up (HR approval required) ---------- */
+// Anyone may ask for an account, but it stays Pending: it cannot log in and is hidden
+// from every list until HR approves it. A sign-up is always a regular employee (never
+// HR or MANAGER), and HR chooses the department and role when approving, so the normal
+// manager rules apply at that moment.
+
+// Inserts a record under a fresh id; the condition makes sure no existing record is overwritten.
+async function insertWithNewId(employee) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    employee.id = `EMP-${randomUUID().slice(0, 8)}`;
+    try {
+      employee.updatedAt = new Date().toISOString();
+      await db.send(new PutCommand({
+        TableName: TABLE,
+        Item: employee,
+        ConditionExpression: 'attribute_not_exists(id)'
+      }));
+      return employee;
+    } catch (error) {
+      if (error.name !== 'ConditionalCheckFailedException') throw error;
+    }
+  }
+  throw new AppError(500, 'ID_CLASH', 'Could not create a fresh employee id. Try again.');
+}
+
+async function signUp(data) {
+  if (await findByEmail(data.email)) {
+    throw new AppError(409, 'EMAIL_TAKEN', 'This email is already registered or waiting for approval.');
+  }
+  const now = new Date().toISOString();
+  const employee = await insertWithNewId({
+    name: data.name,
+    email: data.email.toLowerCase(),
+    phone: data.phone || '',
+    skills: data.skills || [],
+    departmentId: null,
+    roleId: null,
+    managerId: null,
+    status: 'Pending',
+    accessRole: 'EMPLOYEE',
+    passwordHash: await bcrypt.hash(data.password, 10),
+    createdAt: now,
+    signedUpAt: now
+  });
+  return stripPassword(employee);
+}
+
+async function listSignUps() {
+  return (await scanAll(TABLE))
+    .filter((e) => e.status === 'Pending')
+    .map(stripPassword)
+    .sort((a, b) => a.signedUpAt.localeCompare(b.signedUpAt));
+}
+
+async function getPendingOrFail(id) {
+  const employee = await getEmployeeOrFailRaw(id);
+  if (employee.status !== 'Pending') {
+    throw new AppError(409, 'NOT_PENDING', `${employee.name} is not a pending sign-up.`);
+  }
+  return employee;
+}
+
+// HR approves: the account becomes Active, gets a department and role, and reports to the
+// department head when the manager rules allow it (the same rule as HR registration).
+async function approveSignUp(id, { departmentId, roleId }, approvedById) {
+  const employee = await getPendingOrFail(id);
+  let department = null;
+  if (departmentId) department = await organization().getDepartmentOrFail(departmentId);
+  if (roleId) await organization().getRoleOrFail(roleId);
+
+  employee.departmentId = departmentId || null;
+  employee.roleId = roleId || null;
+  employee.managerId = null;
+
+  let managerAssignedAutomatically = false;
+  if (department && department.headId) {
+    const ctx = await loadContext();
+    try {
+      checkManagerRules(employee, department.headId, ctx);
+      employee.managerId = department.headId;
+      managerAssignedAutomatically = true;
+    } catch {
+      employee.managerId = null;
+    }
+  }
+
+  employee.status = 'Active';
+  employee.approvedBy = approvedById || null;
+  employee.approvedAt = new Date().toISOString();
+  return { ...stripPassword(await save(employee)), managerAssignedAutomatically };
+}
+
+// HR rejects: the request is removed, so the email can be used again.
+async function rejectSignUp(id) {
+  const employee = await getPendingOrFail(id);
+  await db.send(new DeleteCommand({ TableName: TABLE, Key: { id } }));
+  return stripPassword(employee);
 }
 
 /* ---------- Manager rules (shared by onboarding, assignment and reassignment) ---------- */
@@ -186,15 +292,16 @@ function checkManagerRules(employee, managerId, ctx, extraReports = 1) {
 
 /* ---------- Function 1: Employee onboarding ---------- */
 
+// Without a list, checks every record, pending sign-ups included, so an email is never used twice.
 async function findByEmail(email, staff) {
-  const list = staff || await listEmployees();
+  const list = staff || await scanAll(TABLE);
   return list.find((e) => e.email === email.toLowerCase()) || null;
 }
 
 async function createEmployee(data) {
   const ctx = await loadContext();
 
-  if (await findByEmail(data.email, ctx.staff)) {
+  if (await findByEmail(data.email)) {
     throw new AppError(409, 'EMAIL_TAKEN', `An employee with email ${data.email} already exists.`);
   }
   let department = null;
@@ -252,6 +359,9 @@ async function createEmployee(data) {
 
 async function updateEmployee(id, changes) {
   const employee = await getEmployeeOrFailRaw(id);
+  if (employee.status === 'Pending') {
+    throw new AppError(409, 'NOT_APPROVED', `${employee.name} is a sign-up waiting for HR approval.`);
+  }
   if (employee.status === 'Left') {
     throw new AppError(409, 'EMPLOYEE_LEFT', `${employee.name} has left; the record can no longer be edited.`);
   }
@@ -345,6 +455,9 @@ async function deleteEmployee(id) {
 
 async function assignManager(id, managerId) {
   const employee = await getEmployeeOrFailRaw(id);
+  if (employee.status === 'Pending') {
+    throw new AppError(409, 'NOT_APPROVED', `${employee.name} is a sign-up waiting for HR approval.`);
+  }
   if (employee.status === 'Left') {
     throw new AppError(409, 'EMPLOYEE_LEFT', `${employee.name} has left.`);
   }
@@ -401,6 +514,9 @@ async function reassignTeam(managerId, newManagerId) {
 // trail (who, from which role, to which role, when, why) is kept.
 async function promote(id, roleId, reason, promotedById) {
   const employee = await getEmployeeOrFailRaw(id);
+  if (employee.status === 'Pending') {
+    throw new AppError(409, 'NOT_APPROVED', `${employee.name} is a sign-up waiting for HR approval.`);
+  }
   if (employee.status === 'Left') {
     throw new AppError(409, 'EMPLOYEE_LEFT', `${employee.name} has left; the record can no longer be edited.`);
   }
@@ -449,6 +565,9 @@ async function getPromotionHistory(id) {
 // Used by the Organization Structure service to give an employee a role.
 async function setRole(id, roleId) {
   const employee = await getEmployeeOrFailRaw(id);
+  if (employee.status === 'Pending') {
+    throw new AppError(409, 'NOT_APPROVED', `${employee.name} is a sign-up waiting for HR approval.`);
+  }
   employee.roleId = roleId;
   return stripPassword(await save(employee));
 }
@@ -463,6 +582,10 @@ module.exports = {
   getEmployeeOrFail,
   getTeam,
   login,
+  signUp,
+  listSignUps,
+  approveSignUp,
+  rejectSignUp,
   createEmployee,
   updateEmployee,
   changeStatus,

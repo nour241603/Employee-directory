@@ -18,6 +18,10 @@ A valid token with the wrong role: `403`.
 | Method | Path | Who | What it does |
 |---|---|---|---|
 | POST | `/api/employees/login` | anyone | Body: `{ "email", "password" }`. Returns `{ "token", "user" }`. Wrong email or password: `401 LOGIN_FAILED` (same message both ways). A user who left: `401 ACCOUNT_INACTIVE`. |
+| POST | `/api/employees/signup` | anyone | Body: `{ "name", "email", "password", "phone"?, "skills"? }`. Password: 8-72 chars with a letter and a number. Creates a **Pending** account (always `EMPLOYEE`; any other fields are ignored). `201`. Email already used or pending: `409 EMAIL_TAKEN`. A pending account cannot log in (`401 ACCOUNT_PENDING`) and is hidden from every list, search and the org chart. |
+| GET | `/api/employees/signups` | HR | Pending sign-ups, oldest first. |
+| POST | `/api/employees/:id/approve` | HR | Body: `{ "departmentId"?, "roleId"? }`. Makes the account Active; reports to the department head when the manager rules allow. Not pending: `409 NOT_PENDING`. |
+| POST | `/api/employees/:id/reject` | HR | Removes the pending request, so the email can be used again. |
 | GET | `/api/employees` | logged in | Lists all employees (without `passwordHash`). |
 | POST | `/api/employees` | HR | Registers an employee. With no `managerId`, the department head is assigned automatically when the rules allow. `201` created. Duplicate email: `409 EMAIL_TAKEN`. Unknown department/role: `404`. |
 | GET | `/api/employees/:id` | logged in | One employee. `404 EMPLOYEE_NOT_FOUND`. |

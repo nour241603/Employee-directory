@@ -24,6 +24,7 @@ async function loadAll() {
     ]);
     renderList();
     fillForms();
+    await loadSignUps();
   } catch (error) {
     if (error.status === 401) {
       window.location.href = 'login.html';
@@ -270,7 +271,82 @@ async function deleteRecord(id) {
   }
 }
 
+/* ---------- Sign-up requests (HR) ---------- */
+
+async function loadSignUps() {
+  const card = document.getElementById('signups-card');
+  let signUps;
+  try {
+    signUps = await apiRequest('/api/employees/signups');
+  } catch (error) {
+    card.hidden = true;            // 403 for everyone except HR: nothing to show
+    if (error.status !== 403) showMessage(error.message, 'error');
+    return;
+  }
+  card.hidden = false;
+  document.getElementById('signups-count').textContent = signUps.length;
+  const box = document.getElementById('signup-list');
+  if (signUps.length === 0) {
+    box.innerHTML = '<p class="muted">No requests waiting.</p>';
+    return;
+  }
+  const deptOptions = departments.map((d) => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name)}</option>`).join('');
+  const roleOptions = roles.map((r) => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.title)} (level ${r.level})</option>`).join('');
+  box.innerHTML = `
+    <table>
+      <thead><tr><th>Name</th><th>Email</th><th>Requested</th><th>Department</th><th>Role</th><th></th></tr></thead>
+      <tbody>
+        ${signUps.map((p) => `
+          <tr data-signup="${escapeHtml(p.id)}">
+            <td>${escapeHtml(p.name)}</td>
+            <td>${escapeHtml(p.email)}</td>
+            <td>${escapeHtml(new Date(p.signedUpAt).toLocaleString())}</td>
+            <td><select class="signup-dept"><option value="">No department</option>${deptOptions}</select></td>
+            <td><select class="signup-role"><option value="">No role</option>${roleOptions}</select></td>
+            <td class="actions">
+              <button type="button" data-approve="${escapeHtml(p.id)}">Approve</button>
+              <button type="button" class="danger" data-reject="${escapeHtml(p.id)}">Reject</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function approveSignUp(id) {
+  const row = document.querySelector(`tr[data-signup="${CSS.escape(id)}"]`);
+  const body = {
+    departmentId: row.querySelector('.signup-dept').value || null,
+    roleId: row.querySelector('.signup-role').value || null
+  };
+  try {
+    const approved = await apiRequest(`/api/employees/${encodeURIComponent(id)}/approve`, { method: 'POST', body });
+    let text = `${approved.name} is approved and can log in now.`;
+    if (approved.managerAssignedAutomatically) text += ` Reports to ${nameOf(employees, approved.managerId)}.`;
+    showMessage(text);
+    await loadAll();
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+}
+
+async function rejectSignUp(id) {
+  if (!window.confirm('Reject this sign-up request? It will be removed.')) return;
+  try {
+    const result = await apiRequest(`/api/employees/${encodeURIComponent(id)}/reject`, { method: 'POST' });
+    showMessage(result.message);
+    await loadAll();
+  } catch (error) {
+    showMessage(error.message, 'error');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('signup-list').addEventListener('click', (event) => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    if (button.dataset.approve) approveSignUp(button.dataset.approve);
+    if (button.dataset.reject) rejectSignUp(button.dataset.reject);
+  });
   loadAll();
   document.getElementById('register-form').addEventListener('submit', registerEmployee);
   document.getElementById('edit-form').addEventListener('submit', saveProfile);

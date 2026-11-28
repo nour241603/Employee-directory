@@ -1,0 +1,15 @@
+# Floci: a free local copy of AWS on port 4566 (from Floci's official docs, https://floci.io/floci/)
+# Start:  docker compose -f infra/floci/docker-compose.yml up -d
+# Stop:   docker compose -f infra/floci/docker-compose.yml down
+# Dashboard: http://localhost:4566/_floci/ui
+services:
+  floci:
+    image: floci/floci:latest
+    container_name: floci
+    user: root                 # needed to use the Docker socket below
+    ports:
+      - "4566:4566"
+    volumes:
+      # Lambda runs our code in real containers, so Floci needs Docker access.
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped

@@ -50,6 +50,24 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 AUTH_SECRET_NAME=empdir/auth-secret      # Jana (Secrets Manager)
 
+# ---------- AWS CLI: installed, or Amazon's official image through Docker ----------
+# Floci accepts any keys. Use them when the "floci" profile was never set up.
+if ! { command -v aws >/dev/null 2>&1 && aws configure list-profiles 2>/dev/null | grep -qx "$AWS_PROFILE"; }; then
+  unset AWS_PROFILE
+  export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-test}" AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-test}"
+fi
+if ! command -v aws >/dev/null 2>&1; then
+  command -v docker >/dev/null 2>&1 || { echo "Neither the AWS CLI nor Docker was found." >&2; exit 1; }
+  PROJECT_HOST_DIR="$(pwd -W 2>/dev/null || pwd)"
+  # Inside the container "localhost" is the container itself; Docker Desktop's name for this PC is host.docker.internal.
+  aws() {
+    docker run --rm -i \
+      -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_REGION -e AWS_DEFAULT_REGION -e AWS_PAGER= \
+      -e AWS_ENDPOINT_URL="${AWS_ENDPOINT_URL/localhost/host.docker.internal}" \
+      -v "$PROJECT_HOST_DIR:/aws" -w /aws amazon/aws-cli "$@"
+  }
+fi
+
 table_arn() { echo "arn:aws:dynamodb:${AWS_REGION}:${ACCOUNT_ID}:table/$1"; }
 fn_arn()    { echo "arn:aws:lambda:${AWS_REGION}:${ACCOUNT_ID}:function:$1"; }
 role_arn()  { echo "arn:aws:iam::${ACCOUNT_ID}:role/$1"; }
@@ -154,7 +172,9 @@ api_id() {
 require_api() {
   API_ID=$(api_id)
   [ -n "$API_ID" ] && [ "$API_ID" != "None" ] || die "API $API_NAME not found. Run: bash $INFRA/nour-api-gateway.sh"
-  API_URL="${API_URL_OVERRIDE:-http://${API_ID}.execute-api.localhost.floci.io:4566}"
+  # Path-style address on localhost: works on every network (the *.localhost.floci.io names
+  # are blocked by some routers/DNS), and it is the same origin as the S3 website.
+  API_URL="${API_URL_OVERRIDE:-${AWS_ENDPOINT_URL:-http://localhost:4566}/_aws/execute-api/${API_ID}/\$default}"
 }
 
 # Connects a function to the API: one integration, its routes, and permission to call it.

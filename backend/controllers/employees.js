@@ -89,6 +89,73 @@ async function login(req, res, next) {
   }
 }
 
+/* ---------- Self sign-up (public) and HR approval ---------- */
+
+// At least 8 characters with a letter and a number; 72 is bcrypt's limit.
+const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{8,72}$/;
+
+async function signUp(req, res, next) {
+  try {
+    requireJson(req);
+    // Only these fields are read: status, accessRole, department, role and manager can never come from a sign-up.
+    const { name, email, phone, skills, password } = req.body;
+    const errors = checkFields({ name, email, phone, skills }, { partial: false });
+    if (typeof password !== 'string' || !PASSWORD_PATTERN.test(password)) {
+      errors.push({ field: 'password', message: 'Password must be 8 to 72 characters with at least one letter and one number.' });
+    }
+    if (errors.length) throw validationError(errors);
+
+    const data = clean({ name, email, phone, skills }, ['name', 'email', 'phone', 'skills']);
+    const pending = await employeeService.signUp({ ...data, password });
+    res.status(201).json({
+      message: 'Sign-up received. You can log in once HR approves your account.',
+      id: pending.id,
+      status: pending.status
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function listSignUps(req, res, next) {
+  try {
+    res.status(200).json(await employeeService.listSignUps());
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function approveSignUp(req, res, next) {
+  try {
+    requireJson(req);
+    const { departmentId, roleId } = req.body;
+    const errors = [];
+    for (const [field, value] of [['departmentId', departmentId], ['roleId', roleId]]) {
+      if (value !== undefined && value !== null && value !== '' &&
+          (typeof value !== 'string' || !ID_PATTERN.test(value))) {
+        errors.push({ field, message: `${field} is not a valid id.` });
+      }
+    }
+    if (errors.length) throw validationError(errors);
+
+    res.status(200).json(await employeeService.approveSignUp(
+      req.params.id,
+      { departmentId: departmentId || null, roleId: roleId || null },
+      req.user ? req.user.id : null));
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function rejectSignUp(req, res, next) {
+  try {
+    const removed = await employeeService.rejectSignUp(req.params.id);
+    res.status(200).json({ message: `The sign-up from ${removed.name} was rejected.`, id: removed.id });
+  } catch (error) {
+    next(error);
+  }
+}
+
 /* ---------- Function 1: Onboarding ---------- */
 
 async function listEmployees(req, res, next) {
@@ -246,6 +313,10 @@ async function getPromotionHistory(req, res, next) {
 }
 
 module.exports = {
+  signUp,
+  listSignUps,
+  approveSignUp,
+  rejectSignUp,
   login,
   listEmployees,
   getEmployee,
