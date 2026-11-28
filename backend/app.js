@@ -26,17 +26,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Each service is mounted only once its routes file exports a router, so the app
-// still starts while a teammate's service is unfinished (it just answers 404).
-function mount(path, file, owner) {
-  const router = require(file);
-  if (typeof router === 'function') app.use(path, router);
-  else console.warn(`${file} (${owner}) is not ready yet; its routes are skipped.`);
-}
-
-mount('/api/employees', './routes/employees', 'Jana');
-mount('/api', './routes/organization', 'Nouran');
-mount('/api/directory', './routes/directory', 'Nour');
+// The three services, one per student.
+app.use('/api/employees', require('./routes/employees'));   // Employee Management (Jana)
+app.use('/api', require('./routes/organization'));          // Organization Structure (Nouran)
+app.use('/api/directory', require('./routes/directory'));   // Search & Directory (Nour)
 
 app.use(notFound);
 app.use(errorHandler);

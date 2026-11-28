@@ -44,7 +44,7 @@ skip() { printf '   -- %s\n' "$*"; }
 die()  { printf '\n\033[31mERROR: %s\033[0m\n' "$*" >&2; exit 1; }
 
 # Always work from the project folder, wherever the script was started.
-# INFRA is this folder's name (works whether the repo calls it infra/ or infre/).
+# INFRA is this folder's name (infra).
 INFRA="$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -124,7 +124,7 @@ ensure_role() {   # ensure_role <role> <policy-name> <policy-file>
 # ---------- Lambda ----------
 build_zip() {
   say "Building the Lambda package ($ZIP)"
-  [ -s backend/lambda.js ] || die "backend/lambda.js is missing or empty (is it still named lamda.js?). The handler is lambda.handler."
+  [ -s backend/lambda.js ] || die "backend/lambda.js is missing or empty. The handler is lambda.handler."
   rm -f "$ZIP"
   (cd backend && npm install --no-audit --no-fund --loglevel=error && npm run zip --silent)
   [ -f "$ZIP" ] || die "$ZIP was not created"
@@ -132,8 +132,8 @@ build_zip() {
 }
 
 # The login signing key lives in Secrets Manager (created by employees-service.sh).
-# Missing key (Jana's part not deployed on this laptop yet): the function is still created,
-# login just answers "not configured" until Jana's script runs and this script runs again.
+# If the key is missing (employees-service.sh has not run yet), the function is still created;
+# login answers "not configured" until employees-service.sh runs and this script runs again.
 auth_secret() {
   aws secretsmanager get-secret-value --secret-id "$AUTH_SECRET_NAME" \
     --query SecretString --output text 2>/dev/null || {
@@ -185,7 +185,7 @@ require_api() {
 # Connects a function to the API: one integration, its routes, and permission to call it.
 attach_routes() {   # attach_routes <function> <route> [<route> ...]
   local fn=$1; shift
-  # Nour's API not on this laptop yet: create the service anyway and skip only the routes.
+  # If the API does not exist yet, create the service anyway and skip only the routes.
   API_ID=$(api_id)
   if [ -z "$API_ID" ] || [ "$API_ID" = "None" ]; then
     printf '   \033[33mWARNING\033[0m API %s not found (API Gateway): routes for %s skipped. Run infra/api-gateway.sh, then run this again.\n' "$API_NAME" "$fn"

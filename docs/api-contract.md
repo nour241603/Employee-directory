@@ -18,7 +18,7 @@ A valid token with the wrong role: `403`.
 | Method | Path | Who | What it does |
 |---|---|---|---|
 | POST | `/api/employees/login` | anyone | Body: `{ "email", "password" }`. Returns `{ "token", "user" }`. Wrong email or password: `401 LOGIN_FAILED` (same message both ways). A user who left: `401 ACCOUNT_INACTIVE`. |
-| PATCH | `/api/employees/me/password` | logged in | Body: `{ "currentPassword", "newPassword" }`. Changes **only the caller's own** password (the user comes from the token, never from the URL or body). Wrong current password: `401 WRONG_PASSWORD`. New password 8-72 chars with a letter and a number, different from the current one: `400 VALIDATION_ERROR` otherwise. `200` on success; every token issued before the change stops working (`401 INVALID_TOKEN`), so the user logs in again. Accounts created by HR have `mustChangePassword: true` until they change it (shown in the login response). |
+| PATCH | `/api/employees/me/password` | logged in | Body: `{ "currentPassword", "newPassword" }`. Changes **only the caller's own** password (the user comes from the token, never from the URL or body). Wrong current password: `401 WRONG_PASSWORD`. New password 8-72 chars with a letter and a number, different from the current one: `400 VALIDATION_ERROR` otherwise. `200` on success; every token issued before the change stops working (`401 INVALID_TOKEN`), so the user logs in again. Accounts created by HR have `mustChangePassword: true` until they change it (shown in the login response); until then every other route answers `403 PASSWORD_CHANGE_REQUIRED`. |
 | POST | `/api/employees/signup` | anyone | Body: `{ "name", "email", "password", "phone"?, "skills"? }`. Password: 8-72 chars with a letter and a number. Creates a **Pending** account (always `EMPLOYEE`; any other fields are ignored). `201`. Email already used or pending: `409 EMAIL_TAKEN`. A pending account cannot log in (`401 ACCOUNT_PENDING`) and is hidden from every list, search and the org chart. |
 | GET | `/api/employees/signups` | HR | Pending sign-ups, oldest first. |
 | POST | `/api/employees/:id/approve` | HR | Body: `{ "departmentId"?, "roleId"? }`. Makes the account Active; reports to the department head when the manager rules allow. Not pending: `409 NOT_PENDING`. |
@@ -59,4 +59,15 @@ Bad input on any route: `400 VALIDATION_ERROR` with the problem fields in `detai
 
 ## Search & Directory (Nour)
 
-(to be filled by Nour)
+All routes need a login token (`Authorization: Bearer <token>`). Missing or invalid token: `401`.
+Every logged-in user can use them. They only read data. Pending sign-ups are never shown. Experts and filters skip people who left.
+
+| Method | Path | Who | What it does |
+|---|---|---|---|
+| GET | `/api/directory` | logged in | Search. Query: `q` (matches name, email, role or a skill; max 80 chars), `department`, `role`, `skill`, `status` (`Active`, `OnLeave`, `Left`; people who left are hidden unless asked for), `sort` (`name`, `department`, `seniority`), `page` (from 1), `limit` (1-50, default 10). Returns `{ "total", "page", "limit", "totalPages", "sort", "results": [...] }`. Bad options: `400 VALIDATION_ERROR`. A page past the end: `400 PAGE_OUT_OF_RANGE`. |
+| GET | `/api/directory/filters` | logged in | The values for the search page's drop-downs: `{ "departments", "roles", "skills", "statuses", "people" }`. |
+| GET | `/api/directory/experts` | logged in | Expert finder. Query: `skills` (1-10, comma separated, required), `department`, `available=true` (only Active people). Ranks people by how many of the skills they have and lists the ones each is missing. Returns `{ "skills", "count", "fullMatches", "skillsNobodyHas", "results": [...] }`. No skills: `400 VALIDATION_ERROR`. |
+| GET | `/api/directory/path` | logged in | Reporting path finder. Query: `from`, `to` (employee ids, both required). Returns `{ "connected", "relationship", "sharedManager", ... }`, for example "Closest shared manager: Layla Hassan" or "Hana Mostafa is above Ahmed Tarek in the reporting line". Same person twice: `400 SAME_EMPLOYEE`. Unknown employee: `404 EMPLOYEE_NOT_FOUND`. |
+| GET | `/api/directory/:id` | logged in | Profile view: the employee with department, role, `managerChain` (up to the top) and `team` (direct reports). Unknown: `404 EMPLOYEE_NOT_FOUND`. |
+
+Ids may only contain `A-Za-z0-9-` (up to 40 chars); anything else is `400 VALIDATION_ERROR`.
