@@ -132,10 +132,14 @@ build_zip() {
 }
 
 # The login signing key lives in Secrets Manager (created by jana-employees.sh).
+# Missing key (Jana's part not deployed on this laptop yet): the function is still created,
+# login just answers "not configured" until Jana's script runs and this script runs again.
 auth_secret() {
   aws secretsmanager get-secret-value --secret-id "$AUTH_SECRET_NAME" \
-    --query SecretString --output text 2>/dev/null ||
-    die "Secret $AUTH_SECRET_NAME not found. Run: bash $INFRA/jana-employees.sh"
+    --query SecretString --output text 2>/dev/null || {
+    printf '   \033[33mWARNING\033[0m login key %s not found (Jana'"'"'s part). Login stays off until Jana'"'"'s services exist; then run this again.\n' "$AUTH_SECRET_NAME" >&2
+    echo ""
+  }
 }
 
 lambda_env() {   # lambda_env <service-name>  -> JSON for --environment
@@ -180,6 +184,12 @@ require_api() {
 # Connects a function to the API: one integration, its routes, and permission to call it.
 attach_routes() {   # attach_routes <function> <route> [<route> ...]
   local fn=$1; shift
+  # Nour's API not on this laptop yet: create the service anyway and skip only the routes.
+  API_ID=$(api_id)
+  if [ -z "$API_ID" ] || [ "$API_ID" = "None" ]; then
+    printf '   \033[33mWARNING\033[0m API %s not found (Nour'"'"'s part): routes for %s skipped. Run Nour'"'"'s API Gateway, then run this again.\n' "$API_NAME" "$fn"
+    return 0
+  fi
   require_api
 
   local uri; uri=$(fn_arn "$fn")
