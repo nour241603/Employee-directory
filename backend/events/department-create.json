@@ -1,0 +1,18 @@
+{
+  "version": "2.0",
+  "routeKey": "POST /api/departments",
+  "rawPath": "/api/departments",
+  "rawQueryString": "",
+  "headers": {
+    "content-type": "application/json",
+    "authorization": "Bearer REPLACE-WITH-A-REAL-HR-TOKEN"
+  },
+  "requestContext": {
+    "http": {
+      "method": "POST",
+      "path": "/api/departments"
+    }
+  },
+  "body": "{\"name\":\"Finance\",\"description\":\"Budgets and payments\"}",
+  "isBase64Encoded": false
+}

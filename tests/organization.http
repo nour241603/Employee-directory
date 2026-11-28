@@ -1,0 +1,124 @@
+# OWNER: Nouran - Organization Structure tests (VS Code REST Client: click "Send Request")
+# Run in order on fresh sample data (npm run setup-db). Demo password for every sample employee: password123
+@baseUrl = http://localhost:3000
+
+### Login as HR (Salma) -> 200
+# @name hrLogin
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "salma.nabil@example.com", "password": "password123" }
+
+### Login as EMPLOYEE (Karim) -> 200, used for the permission test
+# @name empLogin
+POST {{baseUrl}}/api/employees/login
+Content-Type: application/json
+
+{ "email": "karim.said@example.com", "password": "password123" }
+
+### ---------- Departments ----------
+
+### O1 List departments with employee counts -> 200
+GET {{baseUrl}}/api/departments
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### O2 Create a department -> 201
+POST {{baseUrl}}/api/departments
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Finance", "description": "Budgets and payments" }
+
+### O3 Duplicate name, different letter case -> 409 DEPARTMENT_EXISTS
+POST {{baseUrl}}/api/departments
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "engineering" }
+
+### O4 Empty name -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/departments
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "" }
+
+### O5 Delete a department that still has staff -> 409 DEPARTMENT_NOT_EMPTY
+DELETE {{baseUrl}}/api/departments/DEP-eng
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### O6 Head must belong to the department -> 409 HEAD_NOT_IN_DEPARTMENT
+PUT {{baseUrl}}/api/departments/DEP-eng
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "headId": "EMP-005" }
+
+### ---------- Roles ----------
+
+### O7 List roles, highest level first -> 200
+GET {{baseUrl}}/api/roles
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### O8 Create a role -> 201
+POST {{baseUrl}}/api/roles
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "title": "Intern", "level": 1 }
+
+### O9 Level outside 1-10 -> 400 VALIDATION_ERROR
+POST {{baseUrl}}/api/roles
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "title": "Wizard", "level": 99 }
+
+### O10 Delete a role that is still assigned -> 409 ROLE_IN_USE
+DELETE {{baseUrl}}/api/roles/ROL-junior
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Role assignment rules ----------
+
+### O11 Role above the manager's role -> 409 ROLE_ABOVE_MANAGER
+PUT {{baseUrl}}/api/employees/EMP-003/role
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-ceo" }
+
+### O12 Role not above the team's roles -> 409 ROLE_BELOW_TEAM
+PUT {{baseUrl}}/api/employees/EMP-001/role
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-junior" }
+
+### O13 Valid role assignment -> 200
+PUT {{baseUrl}}/api/employees/EMP-003/role
+Authorization: Bearer {{hrLogin.response.body.token}}
+Content-Type: application/json
+
+{ "roleId": "ROL-senior" }
+
+### ---------- Org chart ----------
+
+### O14 Whole company chart -> 200, tree from Layla Hassan
+GET {{baseUrl}}/api/org-chart
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### O15 One department's chart -> 200
+GET {{baseUrl}}/api/org-chart?departmentId=DEP-eng
+Authorization: Bearer {{hrLogin.response.body.token}}
+
+### ---------- Security ----------
+
+### O16 Employee (not HR) tries to create a department -> 403 NOT_ALLOWED
+POST {{baseUrl}}/api/departments
+Authorization: Bearer {{empLogin.response.body.token}}
+Content-Type: application/json
+
+{ "name": "Secret Team" }
+
+### O17 No token -> 401
+GET {{baseUrl}}/api/departments
