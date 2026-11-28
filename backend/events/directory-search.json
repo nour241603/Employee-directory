@@ -1,0 +1,23 @@
+{
+  "version": "2.0",
+  "routeKey": "GET /api/directory",
+  "rawPath": "/api/directory",
+  "rawQueryString": "q=karim&department=DEP-eng&sort=name&page=1&limit=10",
+  "queryStringParameters": {
+    "q": "karim",
+    "department": "DEP-eng",
+    "sort": "name",
+    "page": "1",
+    "limit": "10"
+  },
+  "headers": {
+    "authorization": "Bearer REPLACE-WITH-A-REAL-LOGIN-TOKEN"
+  },
+  "requestContext": {
+    "http": {
+      "method": "GET",
+      "path": "/api/directory"
+    }
+  },
+  "isBase64Encoded": false
+}
